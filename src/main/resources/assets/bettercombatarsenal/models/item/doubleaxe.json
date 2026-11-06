@@ -1,0 +1,32 @@
+{
+  "parent": "builtin/entity",
+  "textures": {
+    "particle": "bettercombatarsenal:block/doubleaxe"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, 90, 0],
+      "translation": [0, 13, 2]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 90, 0],
+      "translation": [0, 13, 2]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, 90, -20],
+      "translation": [6, 0, 0]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 90, -20],
+      "translation": [6, 0, 0]
+    },
+    "ground": {
+      "translation": [0, 17, 0]
+    },
+    "fixed": {
+      "rotation": [0, 0, 45],
+      "translation": [1.5, -1.5, 0],
+      "scale": [0.55, 0.55, 0.55]
+    }
+  }
+}

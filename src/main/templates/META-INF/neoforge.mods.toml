@@ -1,0 +1,41 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="zszq"
+description='''
+Better Combat Arsenal adds melee weapons whose attack animations are supplied by
+Better Combat weapon presets. Weapon definitions are data-driven, so the arsenal can grow
+without touching the registration code.
+'''
+
+# No mixins are used by this mod.
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+# Optional integration. Better Combat is only linked through datapack files
+# (data/bettercombatarsenal/weapon_attributes/<weapon>.json), so the mod also runs
+# without it and simply falls back to vanilla combat behaviour.
+[[dependencies.${mod_id}]]
+    modId="bettercombat"
+    type="optional"
+    versionRange="[2.0.0,)"
+    ordering="AFTER"
+    side="BOTH"
+    reason="Provides the melee attack animation presets used by the arsenal weapons."

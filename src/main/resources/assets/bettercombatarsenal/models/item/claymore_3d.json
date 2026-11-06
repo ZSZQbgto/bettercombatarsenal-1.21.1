@@ -1,0 +1,6 @@
+{
+  "parent": "bettercombatarsenal:item/claymore_geometry",
+  "textures": {
+    "1": "bettercombatarsenal:block/claymore"
+  }
+}
