@@ -6,6 +6,7 @@ import com.mojang.logging.LogUtils;
 import com.zszq.bettercombatarsenal.compat.BetterCombatIntegration;
 import com.zszq.bettercombatarsenal.registry.ModCreativeTabs;
 import com.zszq.bettercombatarsenal.registry.ModItems;
+import com.zszq.bettercombatarsenal.registry.ModParticles;
 
 import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.bus.api.IEventBus;
@@ -28,6 +29,7 @@ public final class BetterCombatArsenal {
 
     public BetterCombatArsenal(IEventBus modEventBus) {
         ModItems.ITEMS.register(modEventBus);
+        ModParticles.PARTICLE_TYPES.register(modEventBus);
         ModCreativeTabs.TABS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);

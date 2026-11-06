@@ -5,6 +5,18 @@
     "two_handed": true,
     "pose": "bettercombat:pose_two_handed_sword",
     "category": "claymore",
+    "trail_appearance": {
+      "default_appearance": {
+        "primary": { "color_rgba": 4294967193, "glows": true },
+        "secondary": { "color_rgba": 2576980326, "glows": true }
+      },
+      "conditional": {
+        "is_enchanted": {
+          "primary": { "color_rgba": 1725562777, "glows": true },
+          "secondary": { "color_rgba": 2582052684, "glows": true }
+        }
+      }
+    },
     "attacks": [
       {
         "hitbox": "HORIZONTAL_PLANE",

@@ -3,18 +3,27 @@ package com.zszq.bettercombatarsenal.client;
 import java.util.List;
 
 import com.zszq.bettercombatarsenal.BetterCombatArsenal;
+import com.zszq.bettercombatarsenal.client.fx.GlowSparkParticle;
+import com.zszq.bettercombatarsenal.client.fx.WeaponGlowConfig;
+import com.zszq.bettercombatarsenal.client.fx.WeaponTrailFx;
 import com.zszq.bettercombatarsenal.registry.ModItems;
+import com.zszq.bettercombatarsenal.registry.ModParticles;
 import com.zszq.bettercombatarsenal.weapon.WeaponCatalog;
 import com.zszq.bettercombatarsenal.weapon.WeaponDefinition;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Client-only wiring for the arsenal weapons.
@@ -31,10 +40,31 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 @Mod(value = BetterCombatArsenal.MODID, dist = Dist.CLIENT)
 public final class ArsenalClient {
 
+    private int configCheckTicks;
+
     public ArsenalClient(IEventBus modEventBus) {
         modEventBus.addListener(this::registerAdditionalModels);
         modEventBus.addListener(this::registerClientExtensions);
         modEventBus.addListener(this::registerGeometryLoaders);
+        modEventBus.addListener(this::registerParticleProviders);
+        modEventBus.addListener(this::clientSetup);
+        NeoForge.EVENT_BUS.addListener(this::clientTick);
+    }
+
+    private void clientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(WeaponGlowConfig::load);
+    }
+
+    private void clientTick(ClientTickEvent.Post event) {
+        WeaponTrailFx.tick(Minecraft.getInstance());
+        if (++configCheckTicks >= 20) {
+            configCheckTicks = 0;
+            WeaponGlowConfig.reloadIfChanged();
+        }
+    }
+
+    private void registerParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(ModParticles.GLOW_SPARK.get(), GlowSparkParticle.Provider::new);
     }
 
     private void registerGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {
@@ -44,6 +74,7 @@ public final class ArsenalClient {
     private void registerAdditionalModels(ModelEvent.RegisterAdditional event) {
         for (WeaponDefinition weapon : WeaponCatalog.all()) {
             event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_3d")));
+            event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_fx")));
             event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_thumbnail")));
         }
     }

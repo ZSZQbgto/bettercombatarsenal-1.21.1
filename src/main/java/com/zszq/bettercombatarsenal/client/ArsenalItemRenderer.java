@@ -2,6 +2,7 @@ package com.zszq.bettercombatarsenal.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.zszq.bettercombatarsenal.client.fx.WeaponGlow;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
@@ -69,5 +70,11 @@ public final class ArsenalItemRenderer extends BlockEntityWithoutLevelRenderer {
                 bufferSource, Sheets.translucentItemSheet(), true, stack.hasFoil());
         Minecraft.getInstance().getItemRenderer()
                 .renderModelLists(model, stack, packedLight, packedOverlay, poseStack, buffer);
+
+        // The supplied "<id>_blade" masks are drawn as a full-bright overlay on top of the base
+        // model, so only the authored blade pixels glow. The GUI keeps using the plain 2D icon.
+        if (!thumbnail) {
+            WeaponGlow.render(stack, itemId, displayContext, poseStack, bufferSource);
+        }
     }
 }

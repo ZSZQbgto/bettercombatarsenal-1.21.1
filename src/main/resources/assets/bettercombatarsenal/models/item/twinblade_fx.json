@@ -1,0 +1,8 @@
+{
+  "loader": "bettercombatarsenal:permissive_model",
+  "source": "bettercombatarsenal:geometry/twinblade",
+  "textures": {
+    "particle": "bettercombatarsenal:item/twinblade_blade",
+    "1": "bettercombatarsenal:item/twinblade_blade"
+  }
+}

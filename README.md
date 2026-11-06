@@ -1,11 +1,12 @@
-# Better Combat Arsenal
+﻿# Better Combat Arsenal
 
 A small, data-driven NeoForge weapon mod for Minecraft **1.21.1** whose melee weapons use
 [Better Combat](https://modrinth.com/mod/better-combat) weapon presets for their attack
 animations.
 
-It currently ships two weapons — a one-handed **Sword** and a two-handed **Claymore** — and is
-structured so more weapons can be added without touching the registration code.
+It currently ships four weapons — a one-handed **Sword**, two-handed **Claymore**, **Twin Blade**
+and **Double Axe** — and is structured so more weapons can be added without touching the
+registration code.
 
 ## Features
 
@@ -19,6 +20,20 @@ structured so more weapons can be added without touching the registration code.
 - Dedicated **Better Combat Arsenal** creative tab, plus entries in the vanilla Combat tab.
 - **2D GUI thumbnails**: the supplied 16×16 icons from `resourcepacks/item` are used *only* for the
   inventory/hotbar/creative-menu thumbnail; every in-world context renders the full 3D model.
+- **Glowing blade**: every weapon ships a supplied `<weapon>_blade.png` mask (opaque only on the
+  blade pixels). The mask is bound to an overlay model (`item/<id>_fx`) that re-uses the authored
+  geometry, which is then drawn full-bright on top of the base model — only the blade glows.
+  Everything is tunable in `config/bettercombatarsenal/weapon_glow.json`.
+- **Glowing slash trail**: each weapon's `weapon_attributes` data declares its own Better Combat
+  `trail_appearance` with `glows: true`, so Better Combat's built-in slash trail is self-lit too.
+- **Trail sparks**: while a Better Combat weapon swing is running, small full-bright sparks are
+  emitted along the blade and fade out over 0.5 s; normal/vanilla swings never emit them. While the
+  player moves, a few longer-lived sparks (2–3 s) are left behind where the blade swept. Amount,
+  size, lifetime, spread and velocity are configurable.
+- **Sodium / Iris friendly**: without shaders the overlay uses an additive, full-bright layer; as
+  soon as an Iris shader pack is active it automatically switches to the vanilla
+  `entity_translucent_emissive` layer (a self-lit render type shader packs already handle). Iris is
+  detected through its API reflectively, so Iris is not a required dependency.
 - Sword, claymore and twin blade are in the `minecraft:swords` item tag; the double axe is in
   `minecraft:axes`. The matching enchantment tags (Sharpness, Fire Aspect where applicable,
   durability, ...) apply.
@@ -42,6 +57,120 @@ The visible item model (`models/item/<id>.json`) is a `builtin/entity` model car
 display transforms, so vanilla applies the hand/ground transform before the renderer draws. The two
 additional models are registered generically for every catalogue weapon by `client/ArsenalClient`,
 which means future weapons need no Java changes.
+
+## Blade glow
+
+Each weapon gets a second, mask-based overlay model (`models/item/<id>_fx.json`): it parents the
+same geometry and overrides texture key `1` with the supplied `<weapon>_blade.png` mask. The mask is
+transparent everywhere except the blade pixels, so drawing the overlay with full-bright light and a
+glow blend only lights up the blade. The overlay is registered as an additional model and drawn by
+`client/ArsenalItemRenderer` right after the base model in every non-GUI display context.
+
+Client configuration (`config/bettercombatarsenal/weapon_glow.json`, created on first launch and
+re-applied within about a second after editing):
+
+```json
+{
+  "enabled": true,
+  "glow": {
+    "enabled": true,
+    "alpha": 0.85,
+    "additive": true,
+    "mode": "auto",
+    "tint": "#FFFFFF"
+  },
+  "trail": {
+    "particles": true,
+    "particle": "bettercombatarsenal:glow_spark",
+    "particlesPerTick": 5,
+    "particleLifetimeTicks": 10,
+    "particleScale": 0.05,
+    "spread": 0.08,
+    "speed": 0.015
+  },
+  "motion": {
+    "particles": true,
+    "particlesPerTick": 1,
+    "intervalTicks": 2,
+    "particleLifetimeTicks": 50,
+    "particleScale": 0.04,
+    "minSpeed": 0.05,
+    "spread": 0.04,
+    "speed": 0.0
+  }
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `enabled` | Master switch for the glow and the trail sparks |
+| `glow.enabled` | Glow layer switch |
+| `glow.alpha` | Overlay opacity (0–1) |
+| `glow.additive` | Additive blend when no shader pack is active (brighter, self-lit look) |
+| `glow.mode` | `auto` (default), or force `additive` / `translucent` / `emissive` |
+| `glow.tint` | Colour multiplied with the mask (`#RRGGBB`) |
+| `trail.particles` | Emit sparks along the blade during **Better Combat swings only** |
+| `trail.particle` | Particle id; default is the mod's own small full-bright spark `bettercombatarsenal:glow_spark` |
+| `trail.particlesPerTick` | Sparks per client tick during a swing (denser = higher) |
+| `trail.particleLifetimeTicks` | Spark lifetime; `10` = 0.5 s |
+| `trail.particleScale` | Spark size (`0.05` is small; applies to `glow_spark`) |
+| `trail.spread` / `trail.speed` | Random position jitter / velocity per spark |
+| `motion.particles` | Leave a few lingering sparks where the blade sweeps **while the player moves** |
+| `motion.particlesPerTick` / `motion.intervalTicks` | Amount and cadence (1 spark every 2 ticks by default) |
+| `motion.particleLifetimeTicks` | Lingering spark lifetime; `50` = 2.5 s |
+| `motion.particleScale` | Lingering spark size |
+| `motion.minSpeed` | Minimum horizontal speed (blocks/tick) before sparks appear |
+| `motion.spread` / `motion.speed` | Jitter / velocity (`0` = the spark stays where the blade passed) |
+
+### Better Combat slash trail
+
+Better Combat's own slash trail is re-coloured and lit through the weapon data, not through code:
+each `data/bettercombatarsenal/weapon_attributes/<id>.json` carries
+
+```json
+"trail_appearance": {
+  "default_appearance": {
+    "primary": { "color_rgba": 4294967193, "glows": true },
+    "secondary": { "color_rgba": 2576980326, "glows": true }
+  },
+  "conditional": {
+    "is_enchanted": {
+      "primary": { "color_rgba": 1725562777, "glows": true },
+      "secondary": { "color_rgba": 2582052684, "glows": true }
+    }
+  }
+}
+```
+
+`glows: true` is what makes Better Combat render the slash trail self-lit (its particles use the
+glow render path); the colours are Better Combat's default trail colours, so only the glow differs
+from the default look. Because this is datapack data, it keeps working without any code hook and
+can be tuned per weapon.
+
+The extra sparks are client-side only and use a small custom full-bright particle
+(`bettercombatarsenal:glow_spark`, vanilla `glow` sprite). The blade position is captured from the
+`_fx` overlay model while the local player's weapon is rendered, so the sparks follow the real blade
+in first and third person. Two emitters exist:
+
+- **Attack sparks**: only while Better Combat reports a weapon swing in progress
+  (`MinecraftClient_BetterCombat.isWeaponSwingInProgress()`, looked up reflectively so Better Combat
+  stays optional). Because it follows the animation state instead of the attack key, normal/vanilla
+  swings never emit sparks and the emission covers the whole Better Combat animation, including its
+  latter half. Default: 5 sparks per tick, 0.5 s lifetime.
+- **Movement sparks**: while the player is moving, a few longer-lived sparks (default 1 every 2 ticks,
+  2.5 s lifetime) stay where the blade swept and fade out naturally.
+
+Compatibility notes:
+
+- **Sodium**: the overlay is plain quad rendering through the normal `MultiBufferSource`; Sodium does
+  not replace item/entity rendering, so nothing special is needed.
+- **Iris shader packs**: shader packs replace the blend state of custom render types and re-shade
+  translucent geometry in their deferred passes, which can leave a custom additive overlay only
+  partially lit. With `mode: "auto"` the renderer therefore switches to the vanilla
+  `entity_translucent_emissive` render type (bound to the item atlas) whenever
+  `IrisApi.isShaderPackInUse()` reports an active shader pack; that vanilla render type is emissive
+  and handled by every shader pack. The Iris API is looked up via reflection, so no Iris dependency
+  is declared.
 
 ## Weapon attributes
 
@@ -158,11 +287,17 @@ src/main/java/com/zszq/bettercombatarsenal/
 │   └── BetterCombatPresets.java      # opaque Better Combat preset ids (no Better Combat classes)
 ├── registry/
 │   ├── ModItems.java                 # loops over WeaponCatalog, registers every item
+│   ├── ModParticles.java             # glow_spark particle type used by the trail sparks
 │   └── ModCreativeTabs.java          # arsenal tab + vanilla Combat tab entries
 ├── client/                           # client-only (never loaded on a dedicated server)
-│   ├── ArsenalClient.java            # registers additional models + client item extensions + geometry loaders
-│   ├── ArsenalItemRenderer.java      # GUI thumbnail vs in-world 3D renderer
-│   └── PermissiveModelLoader.java    # loads unmodified exports with non-vanilla rotation angles
+│   ├── ArsenalClient.java            # models, client item extensions, geometry loaders, particle provider
+│   ├── ArsenalItemRenderer.java      # GUI thumbnail vs in-world 3D renderer + blade glow call
+│   ├── PermissiveModelLoader.java    # loads unmodified exports with non-vanilla rotation angles
+│   └── fx/
+│       ├── WeaponGlow.java           # full-bright blade-mask overlay (additive / emissive for Iris)
+│       ├── WeaponTrailFx.java        # Better Combat swing / movement spark emitters
+│       ├── GlowSparkParticle.java    # small full-bright spark (0.5 s attack, 2.5 s movement)
+│       └── WeaponGlowConfig.java     # config/bettercombatarsenal/weapon_glow.json loading + reload
 └── compat/
     └── BetterCombatIntegration.java  # optional presence check + startup logging only
 ```
@@ -210,6 +345,8 @@ src/main/java/com/zszq/bettercombatarsenal/
      ```
    - `models/item/<id>_thumbnail.json` — 2D GUI icon, e.g.
      `{"parent":"minecraft:item/generated","textures":{"layer0":"bettercombatarsenal:item/<icon>"}}`;
+   - `models/item/<id>_fx.json` — blade glow overlay: same parent/loader as `_3d` but texture key
+     `1` bound to `bettercombatarsenal:item/<id>_blade` (the supplied mask);
    - `models/item/<id>.json` — `builtin/entity` model with the display transforms copied from the
      export (first/third person, ground, fixed) for the custom renderer;
    - the thumbnail icon may be the only user of a supplied `resourcepacks/item` PNG.
@@ -246,6 +383,10 @@ included **byte-for-byte** (no model or texture content was edited):
 | `resourcepacks/item/model.png` | `assets/bettercombatarsenal/textures/item/model.png` | 16×16 sword GUI thumbnail (used only by `item/sword_thumbnail`) |
 | `resourcepacks/item/twinblade.png` | `assets/bettercombatarsenal/textures/item/twinblade.png` | 16×16 twin blade GUI thumbnail (used only by `item/twinblade_thumbnail`) |
 | `resourcepacks/item/doubleaxe.png` | `assets/bettercombatarsenal/textures/item/doubleaxe.png` | 16×16 double axe GUI thumbnail (used only by `item/doubleaxe_thumbnail`) |
+| `resourcepacks/texture/sword_blade.png` | `assets/bettercombatarsenal/textures/item/sword_blade.png` | blade glow mask (used only by `item/sword_fx`) |
+| `resourcepacks/texture/claymore_blade.png` | `assets/bettercombatarsenal/textures/item/claymore_blade.png` | blade glow mask (used only by `item/claymore_fx`) |
+| `resourcepacks/texture/twinblade_blade.png` | `assets/bettercombatarsenal/textures/item/twinblade_blade.png` | blade glow mask (used only by `item/twinblade_fx`) |
+| `resourcepacks/texture/doubleaxe_blade.png` | `assets/bettercombatarsenal/textures/item/doubleaxe_blade.png` | blade glow mask (used only by `item/doubleaxe_fx`) |
 
 The supplied Blockbench exports reference their textures with un-namespaced paths
 (`"1": "block/claymore"` etc.), which Minecraft resolves in the `minecraft:` namespace. To keep the
@@ -295,16 +436,30 @@ loader wrapper are the only model files written by this project.
 
 Verified on this checkout with Minecraft 1.21.1 + NeoForge 21.1.265:
 
-- `.\gradlew.bat clean build` → `BUILD SUCCESSFUL`; jar
-  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `F9BDE453…CE93`).
-- All four supplied geometry files in the jar are byte-identical to the current provided
-  `resourcepacks/block/claymore.json` / `sword.json` / `twinblade.json` / `doubleaxe.json` (SHA256
-  `E738BBB3…9259` / `45DA30BC…BAE5` / `50E72887…F03E` / `DC2E03C3…856`); no file under
-  `C:\DSHhome\resourcepacks` is written to and no supplied model was edited.
-- Client resource reload with the updated double-axe asset: no `Failed to load model`,
-  `Invalid rotation`, `Missing axis` or `Missing textures` lines for
-  `bettercombatarsenal:*`; the supplied 16×16 icons are used only by the `*_thumbnail` models and
-  the 3D weapons render in hand.
+- `.\gradlew.bat build` → `BUILD SUCCESSFUL`; jar
+  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `15721B8E…30DA`).
+- Updated supplied assets are included byte-identically: `resourcepacks/block/twinblade.json` →
+  `assets/bettercombatarsenal/geometry/twinblade.json` (SHA256 `C45F1CCC…`), the re-exported
+  `resourcepacks/texture/twinblade.png` → `textures/block/twinblade.png` (`64B9BD06…`), and the four
+  `<weapon>_blade.png` masks → `textures/item/<weapon>_blade.png`; no file under
+  `C:\DSHhome\resourcepacks` is written to and no supplied model or texture was edited.
+- Trail data validated against Better Combat 2.4.0 itself: `WeaponAttributesHelper.decode(...)`
+  accepts all four updated `weapon_attributes/*.json`, and after Better Combat's own
+  `ConditionalTrailAppearance.merge(...)` the resolved appearance is
+  `Part[color_rgba=4294967193, glows=true]` / `Part[color_rgba=2576980326, glows=true]` — i.e. the
+  built-in slash trail takes Better Combat's glow render path.
+- Client (dev run) with Better Combat 2.4.0 + Cloth Config 15.0.140 + playerAnimator 2.0.4 **and**
+  the bundled optimization/shader stack (Sodium 0.8.13, Sodium Extra 0.9.5, Iris 1.8.14-beta.1,
+  Complementary Reimagined active, LambDynamicLights, Leawind third person, ETF/EMF, JEI, ...):
+  world joins, Better Combat logs `Loaded container: bettercombatarsenal:sword` / `...claymore` /
+  `...twinblade` / `...doubleaxe`, our log line `Registered 4 arsenal weapon(s)` is printed, the
+  attack hook reports `Better Combat attack hook installed; blade trail particles are active.`, and
+  no `Missing textures in model bettercombatarsenal:*`, `Failed to load model` or render-type errors
+  are emitted for this mod.
+- In-game the four weapons render with the supplied 16×16 icons in the GUI only, the full 3D model
+  in hand, and the `<weapon>_blade.png` mask lights up the blade (additive layer normally, vanilla
+  emissive layer while an Iris shader pack is in use); swings emit the configured glowing particles
+  along the blade and Better Combat's slash trail is self-lit.
 - Dedicated server with Better Combat 2.4.0 (+ Cloth Config 15.0.140, playerAnimator 2.0.4):
   Better Combat logged `Loaded container: bettercombatarsenal:sword` / `...claymore` /
   `...twinblade` / `...doubleaxe`, encoded its weapon registry with no parse/resolve errors. Its
