@@ -8,7 +8,8 @@ version="${mod_version}"
 displayName="BetterCombat:NeonArsenal"
 authors="zszq"
 description='''
-BetterCombat:NeonArsenal adds melee weapons whose attack animations are supplied by
+A new-generation combat weapon kit by Aurora Industries, adding melee weapons whose
+attack animations are supplied by
 Better Combat weapon presets. Weapon definitions are data-driven, so the arsenal can grow
 without touching the registration code.
 '''
@@ -37,7 +38,7 @@ without touching the registration code.
 [[dependencies.${mod_id}]]
     modId="bettercombat"
     type="required"
-    versionRange="[2.0.0,)"
+    versionRange="[2.4.0,)"
     ordering="AFTER"
     side="BOTH"
     reason="Required: provides the melee attack animation presets used by the arsenal weapons."

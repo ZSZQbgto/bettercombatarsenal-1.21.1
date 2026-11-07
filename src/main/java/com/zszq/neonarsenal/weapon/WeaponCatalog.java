@@ -25,37 +25,37 @@ public final class WeaponCatalog {
     private static final List<WeaponDefinition> WEAPONS = List.of(
             WeaponDefinition.builder("sword")
                     .tier(Tiers.IRON)
-                    .attackDamage(5.75F)
+                    .attackDamage(3.3F)
                     .attackSpeed(-2.4F)
                     .betterCombatPreset(NeonArsenalPresets.SWORD)
                     .build(),
             WeaponDefinition.builder("claymore")
                     .tier(Tiers.IRON)
-                    .attackDamage(17.0F)
+                    .attackDamage(12.0F)
                     .attackSpeed(-3.2F)
                     .betterCombatPreset(NeonArsenalPresets.CLAYMORE)
                     .build(),
             WeaponDefinition.builder("doubleaxe")
                     .tier(Tiers.IRON)
-                    .attackDamage(23.6667F)
+                    .attackDamage(17.0F)
                     .attackSpeed(-3.4F)
                     .betterCombatPreset(NeonArsenalPresets.DOUBLE_AXE)
                     .build(),
             WeaponDefinition.builder("twinblade")
                     .tier(Tiers.IRON)
-                    .attackDamage(7.0F)
+                    .attackDamage(6.2F)
                     .attackSpeed(-2.8F)
                     .betterCombatPreset(NeonArsenalPresets.TWIN_BLADE)
                     .build(),
             WeaponDefinition.builder("hengdao")
                     .tier(Tiers.IRON)
-                    .attackDamage(11.0F)
+                    .attackDamage(8.0F)
                     .attackSpeed(-3.0F)
                     .betterCombatPreset(NeonArsenalPresets.KATANA)
                     .build(),
             WeaponDefinition.builder("rapier")
                     .tier(Tiers.IRON)
-                    .attackDamage(3.3636F)
+                    .attackDamage(1.6F)
                     .attackSpeed(-1.8F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
                     .build());
