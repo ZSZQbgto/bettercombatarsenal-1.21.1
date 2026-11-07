@@ -33,6 +33,9 @@ public final class BetterCombatPresets {
     /** Two-handed katana preset: alternating vertical/horizontal slashes, category {@code katana}. */
     public static final ResourceLocation KATANA = of("katana");
 
+    /** One-handed rapier preset: quick horizontal slash + forward stab, category {@code rapier}. */
+    public static final ResourceLocation RAPIER = of("rapier");
+
     private BetterCombatPresets() {
     }
 

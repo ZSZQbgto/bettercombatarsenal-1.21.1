@@ -2,7 +2,7 @@
   "loader": "bettercombatarsenal:permissive_model",
   "source": "bettercombatarsenal:geometry/twinblade",
   "textures": {
-    "particle": "bettercombatarsenal:block/twinblade",
-    "1": "bettercombatarsenal:block/twinblade"
+    "particle": "bettercombatarsenal:weapon/twinblade",
+    "1": "bettercombatarsenal:weapon/twinblade"
   }
 }

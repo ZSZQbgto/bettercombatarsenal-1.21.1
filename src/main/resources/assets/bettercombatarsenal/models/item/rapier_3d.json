@@ -1,0 +1,8 @@
+{
+  "loader": "bettercombatarsenal:permissive_model",
+  "source": "bettercombatarsenal:geometry/rapier",
+  "textures": {
+    "0": "bettercombatarsenal:weapon/rapier",
+    "particle": "bettercombatarsenal:weapon/rapier"
+  }
+}

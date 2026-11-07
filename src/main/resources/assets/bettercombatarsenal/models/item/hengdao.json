@@ -1,7 +1,7 @@
 {
   "parent": "builtin/entity",
   "textures": {
-    "particle": "bettercombatarsenal:block/hengdao"
+    "particle": "bettercombatarsenal:weapon/hengdao"
   },
   "display": {
     "thirdperson_righthand": {

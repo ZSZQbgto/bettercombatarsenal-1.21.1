@@ -92,6 +92,12 @@ public final class JumpAttackHandler {
         if (player.getDeltaMovement().y < 0.0D) {
             return null;
         }
+        // Only actual attack input may turn into a jump attack. Better Combat also queries the
+        // current attack for animation/pose code while the player is merely jumping; without this
+        // guard a normal jump would already start the jump-attack cooldown and block jumping.
+        if (player.level().isClientSide() && !isAttackInputActive(player)) {
+            return null;
+        }
         init();
         if (!ready) {
             return null;
@@ -136,7 +142,11 @@ public final class JumpAttackHandler {
                 BetterCombatArsenal.LOGGER.info(
                         "Jump attack enabled: airborne attacks play the claymore slam with the weapon's own sound");
             }
-            markJumpAttack(player);
+            if (player.level().isClientSide()) {
+                // Only the client tracks the jump cooldown; Better Combat also queries the current
+                // attack for animation/pose updates on the server, which must not start a cooldown.
+                markJumpAttack(player);
+            }
             return attackHand;
         } catch (Throwable ignored) {
             return null;
@@ -249,6 +259,20 @@ public final class JumpAttackHandler {
             }
         } catch (Throwable throwable) {
             BetterCombatArsenal.LOGGER.info("Better Combat not present; jump-attack override disabled");
+        }
+    }
+
+    private static boolean isAttackInputActive(Player player) {
+        try {
+            if (player.swinging) {
+                return true;
+            }
+            net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+            return minecraft.options != null && minecraft.options.keyAttack != null
+                    && minecraft.options.keyAttack.isDown();
+        } catch (Throwable ignored) {
+            // If client classes are unavailable for any reason, keep the old behaviour.
+            return true;
         }
     }
 

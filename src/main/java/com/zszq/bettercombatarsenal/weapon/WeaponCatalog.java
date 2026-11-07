@@ -52,6 +52,12 @@ public final class WeaponCatalog {
                     .attackDamage(4.5F)
                     .attackSpeed(-3.0F)
                     .betterCombatPreset(BetterCombatPresets.KATANA)
+                    .build(),
+            WeaponDefinition.builder("rapier")
+                    .tier(Tiers.IRON)
+                    .attackDamage(2.5F)
+                    .attackSpeed(-1.8F)
+                    .betterCombatPreset(BetterCombatPresets.RAPIER)
                     .build());
 
     private static final Map<String, WeaponDefinition> BY_ID;

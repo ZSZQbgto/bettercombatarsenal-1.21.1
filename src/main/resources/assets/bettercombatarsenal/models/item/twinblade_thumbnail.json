@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "bettercombatarsenal:item/twinblade"
+    "layer0": "bettercombatarsenal:thumbnail/twinblade"
   }
 }

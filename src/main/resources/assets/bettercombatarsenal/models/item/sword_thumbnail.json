@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "bettercombatarsenal:item/model"
+    "layer0": "bettercombatarsenal:thumbnail/sword"
   }
 }

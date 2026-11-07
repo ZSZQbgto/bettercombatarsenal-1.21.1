@@ -1,6 +1,6 @@
 {
   "parent": "bettercombatarsenal:item/sword_geometry",
   "textures": {
-    "1": "bettercombatarsenal:item/sword"
+    "1": "bettercombatarsenal:weapon/sword"
   }
 }

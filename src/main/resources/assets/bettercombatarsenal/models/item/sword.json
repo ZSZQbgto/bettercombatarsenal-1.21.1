@@ -1,7 +1,7 @@
 {
   "parent": "builtin/entity",
   "textures": {
-    "particle": "bettercombatarsenal:item/sword"
+    "particle": "bettercombatarsenal:weapon/sword"
   },
   "display": {
     "thirdperson_righthand": {

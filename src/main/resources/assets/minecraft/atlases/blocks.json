@@ -1,0 +1,22 @@
+{
+  "sources": [
+    {
+      "type": "neoforge:namespaced_directory",
+      "namespace": "bettercombatarsenal",
+      "source": "weapon",
+      "prefix": "weapon/"
+    },
+    {
+      "type": "neoforge:namespaced_directory",
+      "namespace": "bettercombatarsenal",
+      "source": "thumbnail",
+      "prefix": "thumbnail/"
+    },
+    {
+      "type": "neoforge:namespaced_directory",
+      "namespace": "bettercombatarsenal",
+      "source": "blade",
+      "prefix": "blade/"
+    }
+  ]
+}

@@ -43,10 +43,14 @@ import net.minecraft.world.phys.Vec3;
  * the attack key, which means vanilla swings never emit particles and the sparks keep going for the
  * whole attack animation, including its latter half.</p>
  *
- * <p>Blade positions are captured from the glow overlay model while it is rendered, so the sparks
- * follow the real blade in first and third person.</p>
+ * <p>Blade positions are captured per hand (main, off, and non-hand display contexts) from the glow
+ * overlay model while it is rendered, so the sparks follow the real blade in first and third person
+ * and a two-handed weapon in the main hand is not driven by the off-hand render.</p>
  */
 public final class WeaponTrailFx {
+
+    /** Maximum age of a captured blade position; older captures are ignored. */
+    private static final long CAPTURE_MAX_AGE_MS = 500L;
 
     private static final Map<BakedModel, Vec3[]> BLADE_POINTS = new IdentityHashMap<>();
     private static final Set<BakedModel> BLADE_POINTS_SEEN =
@@ -57,14 +61,33 @@ public final class WeaponTrailFx {
     private static Method isSwingInProgressMethod;
     private static Method getCurrentAttackHandMethod;
     private static Method attackHandItemStackMethod;
+    private static Method attackHandIsOffHandMethod;
 
-    private static Vec3 bladeA;
-    private static Vec3 bladeB;
-    private static long capturedAt;
+    private static Capture mainHand;
+    private static Capture offHand;
+    private static Capture display;
+
     private static int motionTickCounter;
     private static int idleTickCounter;
 
     private WeaponTrailFx() {
+    }
+
+    /** World-space blade end points captured from one render pass. */
+    private static final class Capture {
+        private final Vec3 a;
+        private final Vec3 b;
+        private final long capturedAt;
+
+        private Capture(Vec3 a, Vec3 b, long capturedAt) {
+            this.a = a;
+            this.b = b;
+            this.capturedAt = capturedAt;
+        }
+
+        private boolean fresh() {
+            return System.currentTimeMillis() - this.capturedAt <= CAPTURE_MAX_AGE_MS;
+        }
     }
 
     private static void initBetterCombat() {
@@ -78,8 +101,13 @@ public final class WeaponTrailFx {
                     "net.bettercombat.api.MinecraftClient_BetterCombat", false, loader);
             isSwingInProgressMethod = betterCombatClientInterface.getMethod("isWeaponSwingInProgress");
             getCurrentAttackHandMethod = betterCombatClientInterface.getMethod("getCurrentAttackHand");
-            attackHandItemStackMethod = Class.forName("net.bettercombat.api.AttackHand", false, loader)
-                    .getMethod("itemStack");
+            Class<?> attackHand = Class.forName("net.bettercombat.api.AttackHand", false, loader);
+            attackHandItemStackMethod = attackHand.getMethod("itemStack");
+            try {
+                attackHandIsOffHandMethod = attackHand.getMethod("isOffHand");
+            } catch (Throwable ignored) {
+                attackHandIsOffHandMethod = null;
+            }
             BetterCombatArsenal.LOGGER.info(
                     "Better Combat swing detection ready; blade sparks follow Better Combat animations only.");
         } catch (Throwable ignored) {
@@ -91,7 +119,9 @@ public final class WeaponTrailFx {
 
     /**
      * Records the two extreme blade points in world space for the frame currently being rendered.
-     * Called from the item renderer while the local player's arsenal weapon is drawn.
+     * Called from the item renderer while the local player's arsenal weapon is drawn. Captures are
+     * stored per hand so a main-hand two-handed weapon and an off-hand weapon never overwrite each
+     * other.
      */
     public static void captureBlade(BakedModel overlayModel, ItemDisplayContext context,
                                     PoseStack poseStack, ItemStack stack) {
@@ -113,9 +143,21 @@ public final class WeaponTrailFx {
         }
         Camera camera = minecraft.gameRenderer.getMainCamera();
         Matrix4f matrix = new Matrix4f(poseStack.last().pose());
-        bladeA = toWorld(matrix, points[0], context.firstPerson(), camera);
-        bladeB = toWorld(matrix, points[1], context.firstPerson(), camera);
-        capturedAt = System.currentTimeMillis();
+        boolean firstPerson = context.firstPerson();
+        Capture capture = new Capture(
+                toWorld(matrix, points[0], firstPerson, camera),
+                toWorld(matrix, points[1], firstPerson, camera),
+                System.currentTimeMillis());
+        if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                || context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND) {
+            mainHand = capture;
+        } else if (context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND
+                || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND) {
+            offHand = capture;
+        } else {
+            // Ground, item frame, shelf/display contexts.
+            display = capture;
+        }
     }
 
     /**
@@ -147,6 +189,7 @@ public final class WeaponTrailFx {
             return false;
         }
         ItemStack attackingStack;
+        boolean offHandAttack = false;
         try {
             if (!Boolean.TRUE.equals(isSwingInProgressMethod.invoke(minecraft))) {
                 return false;
@@ -156,6 +199,9 @@ public final class WeaponTrailFx {
                 return false;
             }
             attackingStack = (ItemStack) attackHandItemStackMethod.invoke(attackHand);
+            if (attackHandIsOffHandMethod != null) {
+                offHandAttack = Boolean.TRUE.equals(attackHandIsOffHandMethod.invoke(attackHand));
+            }
         } catch (Throwable ignored) {
             return false;
         }
@@ -163,29 +209,24 @@ public final class WeaponTrailFx {
             return false;
         }
         Level level = minecraft.level;
-        if (level == null || bladeA == null || bladeB == null) {
+        if (level == null) {
             return false;
         }
-        if (System.currentTimeMillis() - capturedAt > 500L) {
-            // The item was not rendered recently (screen open, inventory, ...).
+        // Prefer the blade of the attacking hand; fall back to the other hand if it was not captured.
+        Capture capture = fresh(offHandAttack ? offHand : mainHand);
+        if (capture == null) {
+            capture = fresh(mainHand);
+        }
+        if (capture == null) {
+            capture = fresh(offHand);
+        }
+        if (capture == null) {
             return false;
         }
         WeaponGlowConfig.Trail trail = config.trail;
-        List<ParticleOptions> types = resolveParticleVariants(trail.variants, trail.particle);
-        GlowSparkParticle.nextScale = (float) trail.particleScale;
-        GlowSparkParticle.nextLifetime = trail.particleLifetimeTicks;
-        RandomSource random = RandomSource.create();
-        for (int i = 0; i < trail.particlesPerTick; i++) {
-            double t = random.nextDouble();
-            Vec3 point = bladeA.lerp(bladeB, t);
-            double x = point.x + (random.nextDouble() - 0.5D) * trail.spread * 2.0D;
-            double y = point.y + (random.nextDouble() - 0.5D) * trail.spread * 2.0D;
-            double z = point.z + (random.nextDouble() - 0.5D) * trail.spread * 2.0D;
-            double vx = (random.nextDouble() - 0.5D) * trail.speed * 2.0D;
-            double vy = (random.nextDouble() - 0.5D) * trail.speed * 2.0D;
-            double vz = (random.nextDouble() - 0.5D) * trail.speed * 2.0D;
-            level.addParticle(pick(types, random), x, y, z, vx, vy, vz);
-        }
+        emitAlong(capture, level, trail.particlesPerTick, trail.spread, trail.speed,
+                (float) trail.particleScale, trail.particleLifetimeTicks,
+                resolveParticleVariants(trail.variants, trail.particle));
         return true;
     }
 
@@ -200,10 +241,8 @@ public final class WeaponTrailFx {
         if (player == null || level == null) {
             return;
         }
-        if (!holdingArsenalWeapon(player)) {
-            return;
-        }
-        if (bladeA == null || bladeB == null || System.currentTimeMillis() - capturedAt > 500L) {
+        List<Capture> held = heldCaptures(player);
+        if (held.isEmpty()) {
             return;
         }
         double horizontalSpeed = player.getDeltaMovement().horizontalDistance();
@@ -215,54 +254,86 @@ public final class WeaponTrailFx {
         }
         WeaponGlowConfig.Motion motion = config.motion;
         List<ParticleOptions> types = resolveParticleVariants(motion.variants, config.trail.particle);
-        GlowSparkParticle.nextScale = (float) motion.particleScale;
-        GlowSparkParticle.nextLifetime = motion.particleLifetimeTicks;
-        RandomSource random = RandomSource.create();
-        for (int i = 0; i < motion.particlesPerTick; i++) {
-            double t = random.nextDouble();
-            Vec3 point = bladeA.lerp(bladeB, t);
-            double x = point.x + (random.nextDouble() - 0.5D) * motion.spread * 2.0D;
-            double y = point.y + (random.nextDouble() - 0.5D) * motion.spread * 2.0D;
-            double z = point.z + (random.nextDouble() - 0.5D) * motion.spread * 2.0D;
-            double vx = (random.nextDouble() - 0.5D) * motion.speed * 2.0D;
-            double vy = (random.nextDouble() - 0.5D) * motion.speed * 2.0D;
-            double vz = (random.nextDouble() - 0.5D) * motion.speed * 2.0D;
-            level.addParticle(pick(types, random), x, y, z, vx, vy, vz);
+        for (Capture capture : held) {
+            emitAlong(capture, level, motion.particlesPerTick, motion.spread, motion.speed,
+                    (float) motion.particleScale, motion.particleLifetimeTicks, types);
         }
     }
 
     /**
-     * Very light ambient trickle at the blade, also while standing still. It runs for whichever
-     * arsenal weapon was rendered most recently, which covers the held weapon as well as weapons
-     * lying on the ground, in item frames or on shelf/display contexts.
+     * Very light ambient trickle at the blade, also while standing still. It runs for the held
+     * weapon, and otherwise for whichever arsenal weapon was rendered most recently, which covers
+     * weapons lying on the ground, in item frames or on shelf/display contexts.
      */
     private static void emitIdleSparks(Minecraft minecraft, WeaponGlowConfig config) {
         Level level = minecraft.level;
         if (level == null) {
             return;
         }
-        if (bladeA == null || bladeB == null || System.currentTimeMillis() - capturedAt > 500L) {
-            return;
+        LocalPlayer player = minecraft.player;
+        List<Capture> held = player == null ? List.of() : heldCaptures(player);
+        if (held.isEmpty()) {
+            Capture shown = fresh(display);
+            if (shown == null) {
+                return;
+            }
+            held = List.of(shown);
         }
         if (++idleTickCounter % config.idle.intervalTicks != 0) {
             return;
         }
         WeaponGlowConfig.Idle idle = config.idle;
         List<ParticleOptions> types = resolveParticleVariants(idle.variants, config.trail.particle);
-        GlowSparkParticle.nextScale = (float) idle.particleScale;
-        GlowSparkParticle.nextLifetime = idle.particleLifetimeTicks;
+        for (Capture capture : held) {
+            emitAlong(capture, level, idle.particlesPerEmit, idle.spread, idle.speed,
+                    (float) idle.particleScale, idle.particleLifetimeTicks, types);
+        }
+    }
+
+    private static void emitAlong(Capture capture, Level level, int count, double spread, double speed,
+                                  float scale, int lifetime, List<ParticleOptions> types) {
+        GlowSparkParticle.nextScale = scale;
+        GlowSparkParticle.nextLifetime = lifetime;
         RandomSource random = RandomSource.create();
-        for (int i = 0; i < idle.particlesPerEmit; i++) {
+        for (int i = 0; i < count; i++) {
             double t = random.nextDouble();
-            Vec3 point = bladeA.lerp(bladeB, t);
-            double x = point.x + (random.nextDouble() - 0.5D) * idle.spread * 2.0D;
-            double y = point.y + (random.nextDouble() - 0.5D) * idle.spread * 2.0D;
-            double z = point.z + (random.nextDouble() - 0.5D) * idle.spread * 2.0D;
-            double vx = (random.nextDouble() - 0.5D) * idle.speed * 2.0D;
-            double vy = (random.nextDouble() - 0.5D) * idle.speed * 2.0D;
-            double vz = (random.nextDouble() - 0.5D) * idle.speed * 2.0D;
+            Vec3 point = capture.a.lerp(capture.b, t);
+            double x = point.x + (random.nextDouble() - 0.5D) * spread * 2.0D;
+            double y = point.y + (random.nextDouble() - 0.5D) * spread * 2.0D;
+            double z = point.z + (random.nextDouble() - 0.5D) * spread * 2.0D;
+            double vx = (random.nextDouble() - 0.5D) * speed * 2.0D;
+            double vy = (random.nextDouble() - 0.5D) * speed * 2.0D;
+            double vz = (random.nextDouble() - 0.5D) * speed * 2.0D;
             level.addParticle(pick(types, random), x, y, z, vx, vy, vz);
         }
+    }
+
+    private static Capture fresh(Capture capture) {
+        return capture != null && capture.fresh() ? capture : null;
+    }
+
+    /** Blade of the weapon actually held in a hand (main hand first). */
+    private static Capture heldCapture(LocalPlayer player) {
+        List<Capture> captures = heldCaptures(player);
+        return captures.isEmpty() ? null : captures.get(0);
+    }
+
+    /** Fresh blade captures for every hand that holds an arsenal weapon. */
+    private static List<Capture> heldCaptures(LocalPlayer player) {
+        List<Capture> captures = new ArrayList<>(2);
+        if (isArsenalWeapon(player.getMainHandItem())) {
+            Capture capture = fresh(mainHand);
+            if (capture != null) {
+                captures.add(capture);
+            }
+        }
+        if (isArsenalWeapon(player.getOffhandItem())) {
+            Capture capture = fresh(offHand);
+            if (capture != null) {
+                captures.add(capture);
+            }
+        }
+        return captures;
     }
 
     private static ParticleOptions pick(List<ParticleOptions> types, RandomSource random) {
@@ -316,10 +387,6 @@ public final class WeaponTrailFx {
         return new Vec3(transformed.x + cameraPosition.x,
                 transformed.y + cameraPosition.y,
                 transformed.z + cameraPosition.z);
-    }
-
-    private static boolean holdingArsenalWeapon(LocalPlayer player) {
-        return isArsenalWeapon(player.getMainHandItem()) || isArsenalWeapon(player.getOffhandItem());
     }
 
     /** True when this exact stack is in one of the local player's hands (not another entity's). */
