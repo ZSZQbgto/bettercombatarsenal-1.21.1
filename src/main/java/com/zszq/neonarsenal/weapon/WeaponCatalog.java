@@ -55,8 +55,8 @@ public final class WeaponCatalog {
                     .build(),
             WeaponDefinition.builder("rapier")
                     .tier(Tiers.IRON)
-                    .attackDamage(1.8F)
-                    .attackSpeed(-1.8F)
+                    .attackDamage(2.0F)
+                    .attackSpeed(-1.7F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
                     .build());
 
