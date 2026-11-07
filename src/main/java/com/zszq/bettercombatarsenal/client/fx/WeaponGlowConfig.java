@@ -2,6 +2,8 @@ package com.zszq.bettercombatarsenal.client.fx;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -31,6 +33,7 @@ public final class WeaponGlowConfig {
     public Glow glow = new Glow();
     public Trail trail = new Trail();
     public Motion motion = new Motion();
+    public Idle idle = new Idle();
 
     private transient float[] tint = new float[]{1.0F, 1.0F, 1.0F};
 
@@ -96,6 +99,9 @@ public final class WeaponGlowConfig {
         if (motion == null) {
             motion = new Motion();
         }
+        if (idle == null) {
+            idle = new Idle();
+        }
         glow.alpha = Math.max(0.0F, Math.min(1.0F, glow.alpha));
         if (glow.mode == null || glow.mode.isBlank()) {
             glow.mode = "auto";
@@ -116,7 +122,29 @@ public final class WeaponGlowConfig {
         motion.minSpeed = Math.max(0.0D, Math.min(1.0D, motion.minSpeed));
         motion.spread = Math.max(0.0D, Math.min(0.5D, motion.spread));
         motion.speed = Math.max(0.0D, Math.min(0.2D, motion.speed));
+        idle.intervalTicks = Math.max(1, Math.min(60, idle.intervalTicks));
+        idle.particlesPerEmit = Math.max(0, Math.min(4, idle.particlesPerEmit));
+        idle.particleLifetimeTicks = Math.max(10, Math.min(120, idle.particleLifetimeTicks));
+        idle.particleScale = Math.max(0.01D, Math.min(0.5D, idle.particleScale));
+        idle.spread = Math.max(0.0D, Math.min(0.5D, idle.spread));
+        idle.speed = Math.max(0.0D, Math.min(0.2D, idle.speed));
+        trail.variants = cleanVariants(trail.variants);
+        motion.variants = cleanVariants(motion.variants);
+        idle.variants = cleanVariants(idle.variants);
         tint = parseColor(glow.tint);
+    }
+
+    private static List<String> cleanVariants(List<String> variants) {
+        if (variants == null) {
+            return new ArrayList<>();
+        }
+        List<String> cleaned = new ArrayList<>();
+        for (String variant : variants) {
+            if (variant != null && !variant.isBlank()) {
+                cleaned.add(variant.trim());
+            }
+        }
+        return cleaned;
     }
 
     /** Tint multiplied with the supplied blade mask texture, in linear-ish 0..1 RGB. */
@@ -167,9 +195,17 @@ public final class WeaponGlowConfig {
         public boolean particles = true;
         /**
          * Particle id. The default is the mod's own small full-bright spark; any other registered
-         * particle id can be used instead (scale/lifetime then only apply to glow_spark).
+         * particle id can be used instead (scale/lifetime then only apply to glow_* sparks).
          */
         public String particle = "bettercombatarsenal:glow_spark";
+        /**
+         * Optional list of glow_* particle ids; if not empty, one is picked at random for every
+         * spark, which mixes the different spark styles. Falls back to {@link #particle}.
+         */
+        public List<String> variants = new ArrayList<>(List.of(
+                "bettercombatarsenal:glow_sparkle",
+                "bettercombatarsenal:glow_crit",
+                "bettercombatarsenal:glow_spark"));
         /** Sparks emitted per client tick while a swing is active (higher = denser). */
         public int particlesPerTick = 5;
         /** Spark lifetime in client ticks; 10 ticks = 0.5 s. */
@@ -194,6 +230,10 @@ public final class WeaponGlowConfig {
         public int intervalTicks = 2;
         /** Spark lifetime in client ticks; 50 ticks = 2.5 s. */
         public int particleLifetimeTicks = 50;
+        /** Optional random mix of glow_* particle ids (see {@link Trail#variants}). */
+        public List<String> variants = new ArrayList<>(List.of(
+                "bettercombatarsenal:glow_glitter",
+                "bettercombatarsenal:glow_spark"));
         /** Spark size (vanilla glow sprite quad size). */
         public double particleScale = 0.04D;
         /** Minimum horizontal player speed (blocks/tick) needed to emit. */
@@ -201,6 +241,32 @@ public final class WeaponGlowConfig {
         /** Random position jitter in blocks. */
         public double spread = 0.04D;
         /** Random velocity in blocks per tick (near zero = stays where it was created). */
+        public double speed = 0.0D;
+    }
+
+    /**
+     * A very light ambient trickle of sparks at the blade that also runs while the weapon is idle:
+     * in hand, on the ground, in an item frame, or on any shelf/modded display context. This keeps
+     * the blade faintly "alive" even when nothing is moving.
+     */
+    public static final class Idle {
+        public boolean particles = true;
+        /** One emission every this many client ticks (8 = about 2.5x per second). */
+        public int intervalTicks = 8;
+        /** Sparks per emission. */
+        public int particlesPerEmit = 1;
+        /** Spark lifetime in client ticks (40 = 2 s). */
+        public int particleLifetimeTicks = 40;
+        /** Optional random mix of glow_* particle ids (see {@link Trail#variants}). */
+        public List<String> variants = new ArrayList<>(List.of(
+                "bettercombatarsenal:glow_spark",
+                "bettercombatarsenal:glow_glitter",
+                "bettercombatarsenal:glow_magic"));
+        /** Spark size; keep this small so the idle effect stays subtle. */
+        public double particleScale = 0.04D;
+        /** Random position jitter in blocks. */
+        public double spread = 0.03D;
+        /** Random velocity in blocks per tick. */
         public double speed = 0.0D;
     }
 }

@@ -3,6 +3,7 @@ package com.zszq.bettercombatarsenal.client;
 import java.util.List;
 
 import com.zszq.bettercombatarsenal.BetterCombatArsenal;
+import com.zszq.bettercombatarsenal.client.fx.FirstPersonGlowPass;
 import com.zszq.bettercombatarsenal.client.fx.GlowSparkParticle;
 import com.zszq.bettercombatarsenal.client.fx.WeaponGlowConfig;
 import com.zszq.bettercombatarsenal.client.fx.WeaponTrailFx;
@@ -49,6 +50,7 @@ public final class ArsenalClient {
         modEventBus.addListener(this::registerParticleProviders);
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.addListener(this::clientTick);
+        NeoForge.EVENT_BUS.addListener(FirstPersonGlowPass::render);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
@@ -64,7 +66,16 @@ public final class ArsenalClient {
     }
 
     private void registerParticleProviders(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(ModParticles.GLOW_SPARK.get(), GlowSparkParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.GLOW_SPARK.get(),
+                sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 1.0F));
+        event.registerSpriteSet(ModParticles.GLOW_GLITTER.get(),
+                sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 0.85F));
+        event.registerSpriteSet(ModParticles.GLOW_SPARKLE.get(),
+                sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 0.9F));
+        event.registerSpriteSet(ModParticles.GLOW_CRIT.get(),
+                sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 1.05F));
+        event.registerSpriteSet(ModParticles.GLOW_MAGIC.get(),
+                sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 0.95F));
     }
 
     private void registerGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {

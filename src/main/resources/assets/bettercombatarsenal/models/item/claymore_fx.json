@@ -1,6 +1,7 @@
 {
   "parent": "bettercombatarsenal:item/claymore_geometry",
   "textures": {
-    "1": "bettercombatarsenal:item/claymore_blade"
+    "1": "bettercombatarsenal:item/claymore_blade",
+    "particle": "bettercombatarsenal:item/claymore_blade"
   }
 }

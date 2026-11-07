@@ -52,12 +52,64 @@ public final class WeaponGlow {
                     .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
                     .setCullState(RenderStateShard.NO_CULL)
                     .setLightmapState(RenderStateShard.LIGHTMAP)
+                    // Push the overlay slightly toward the camera: without it, quads that are
+                    // exactly coplanar with the base model z-fight and only part of the blade
+                    // appears lit (the "incomplete glow" case).
+                    .setLayeringState(RenderStateShard.POLYGON_OFFSET_LAYERING)
                     .setWriteMaskState(RenderStateShard.COLOR_WRITE)
                     .createCompositeState(false));
 
     /** Self-lit overlay layer handled by Iris shader packs; binds the item atlas explicitly. */
     private static final RenderType EMISSIVE_LAYER =
             RenderType.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS);
+
+    /**
+     * First-person variant of the Iris-compatible emissive layer. It is the same self-lit render
+     * type (NEW_ENTITY format, entity-translucent-emissive shader) but with polygon offset applied.
+     * Without the offset the overlay is exactly coplanar with the hand model; while the weapon is
+     * static the depth comparison then hides the emissive pass behind the hand model (the blade
+     * looks grey from the base texture), and only during animation does it flicker through. The
+     * offset pushes the overlay in front so the blade is uniformly lit while idle as well.
+     */
+    private static final RenderType EMISSIVE_LAYER_FIRST_PERSON = RenderType.create(
+            "bettercombatarsenal_blade_glow_emissive_hand",
+            DefaultVertexFormat.NEW_ENTITY,
+            VertexFormat.Mode.QUADS,
+            1536,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
+                    .setTextureState(RenderStateShard.BLOCK_SHEET)
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setLightmapState(RenderStateShard.LIGHTMAP)
+                    .setOverlayState(RenderStateShard.OVERLAY)
+                    .setLayeringState(RenderStateShard.POLYGON_OFFSET_LAYERING)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false));
+
+    /**
+     * Additive, full-bright layer used by the deferred first-person pass. It keeps depth testing and
+     * back-face culling but has no polygon offset, so the glow is only visible where the blade
+     * surface itself is visible and never shines through the weapon model.
+     */
+    private static final RenderType DEFERRED_LAYER = RenderType.create(
+            "bettercombatarsenal_blade_glow_deferred",
+            DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP,
+            VertexFormat.Mode.QUADS,
+            1536,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.POSITION_COLOR_TEX_LIGHTMAP_SHADER)
+                    .setTextureState(RenderStateShard.BLOCK_SHEET)
+                    .setTransparencyState(RenderStateShard.ADDITIVE_TRANSPARENCY)
+                    .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
+                    .setCullState(RenderStateShard.CULL)
+                    .setLightmapState(RenderStateShard.LIGHTMAP)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false));
 
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
@@ -94,34 +146,57 @@ public final class WeaponGlow {
         if (config.glow.enabled && config.glow.alpha > 0.0F) {
             float[] tint = config.tintColor();
             float alpha = config.glow.alpha;
-            VertexConsumer buffer = buffers.getBuffer(layerFor(config));
-            PoseStack.Pose pose = poseStack.last();
-
-            for (Direction direction : Direction.values()) {
-                writeQuads(buffer, pose, overlay.getQuads(null, direction, RANDOM), tint, alpha);
+            if (context.firstPerson() && shaderPackActive()) {
+                // Iris adaption: blending inside the hand pass is controlled by the shader pack, so
+                // the glow is drawn after the hands (GUI pre phase) with the captured matrices.
+                FirstPersonGlowPass.capture(context, overlay, poseStack, tint, alpha);
+            } else {
+                PoseStack.Pose pose = poseStack.last();
+                drawOverlay(buffers.getBuffer(layerFor(config, context.firstPerson())), pose, overlay,
+                        tint, alpha);
             }
-            writeQuads(buffer, pose, overlay.getQuads(null, null, RANDOM), tint, alpha);
         }
 
-        if (config.trail.particles) {
-            // Reuse the same overlay model to locate the blade so the swing particles follow it.
-            WeaponTrailFx.captureBlade(overlay, context, poseStack);
+        if (config.trail.particles || config.motion.particles || config.idle.particles) {
+            // Reuse the same overlay model to locate the blade so all sparks follow it, in hand and
+            // in display contexts (ground, item frames, shelves, ...).
+            WeaponTrailFx.captureBlade(overlay, context, poseStack, stack);
         }
+    }
+
+    private static void drawOverlay(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
+                                    float[] tint, float alpha) {
+        for (Direction direction : Direction.values()) {
+            writeQuads(buffer, pose, overlay.getQuads(null, direction, RANDOM), tint, alpha);
+        }
+        writeQuads(buffer, pose, overlay.getQuads(null, null, RANDOM), tint, alpha);
+    }
+
+    /** Additive, full-bright layer used by the deferred first-person pass. */
+    public static RenderType deferredLayer() {
+        return DEFERRED_LAYER;
+    }
+
+    /** Draws every overlay quad; shared with the deferred first-person pass. */
+    public static void drawOverlayQuads(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
+                                        float[] tint, float alpha) {
+        drawOverlay(buffer, pose, overlay, tint, alpha);
     }
 
     /**
      * Selects the render type for the glow overlay.
      *
-     * <p>Without shaders the custom additive layer gives the brightest, most even glow. Iris shader
-     * packs replace the pipeline and blending of custom render types, and their deferred passes
-     * shade translucent geometry again, which makes an additive overlay come out partially lit.
-     * The vanilla {@code entity_translucent_emissive} layer is a render type shader packs already
-     * handle (it is explicitly self-lit), so it is used whenever a shader pack is active.</p>
+     * <p>The Iris adaptation itself lives here: shader packs replace the pipeline and blending of
+     * custom render types, and their deferred passes shade translucent geometry again, which makes an
+     * additive overlay come out partially lit. The vanilla {@code entity_translucent_emissive} layer
+     * is a render type shader packs already handle (it is explicitly self-lit), so it is used
+     * whenever a shader pack is active. In first person the same emissive layer is used, only with
+     * polygon offset, so it is not hidden behind the hand model while the weapon is static.</p>
      */
-    private static RenderType layerFor(WeaponGlowConfig config) {
+    private static RenderType layerFor(WeaponGlowConfig config, boolean firstPerson) {
         String mode = config.glow.mode;
         if ("emissive".equals(mode)) {
-            return EMISSIVE_LAYER;
+            return firstPerson ? EMISSIVE_LAYER_FIRST_PERSON : EMISSIVE_LAYER;
         }
         if ("translucent".equals(mode)) {
             return Sheets.translucentItemSheet();
@@ -130,7 +205,7 @@ public final class WeaponGlow {
             return ADDITIVE_LAYER;
         }
         if (shaderPackActive()) {
-            return EMISSIVE_LAYER;
+            return firstPerson ? EMISSIVE_LAYER_FIRST_PERSON : EMISSIVE_LAYER;
         }
         return config.glow.additive ? ADDITIVE_LAYER : Sheets.translucentItemSheet();
     }

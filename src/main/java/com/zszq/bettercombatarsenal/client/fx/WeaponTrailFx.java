@@ -62,6 +62,7 @@ public final class WeaponTrailFx {
     private static Vec3 bladeB;
     private static long capturedAt;
     private static int motionTickCounter;
+    private static int idleTickCounter;
 
     private WeaponTrailFx() {
     }
@@ -93,17 +94,17 @@ public final class WeaponTrailFx {
      * Called from the item renderer while the local player's arsenal weapon is drawn.
      */
     public static void captureBlade(BakedModel overlayModel, ItemDisplayContext context,
-                                    PoseStack poseStack) {
+                                    PoseStack poseStack, ItemStack stack) {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player == null || minecraft.level == null) {
             return;
         }
-        if (!holdingArsenalWeapon(player)) {
-            return;
-        }
-        if (!context.firstPerson() && context != ItemDisplayContext.THIRD_PERSON_LEFT_HAND
-                && context != ItemDisplayContext.THIRD_PERSON_RIGHT_HAND) {
+        boolean handContext = context.firstPerson()
+                || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND
+                || context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
+        if (handContext && !isLocalPlayerWeapon(player, stack)) {
+            // Another entity's held weapon: do not drive the local player's blade sparks with it.
             return;
         }
         Vec3[] points = bladePoints(overlayModel);
@@ -117,7 +118,10 @@ public final class WeaponTrailFx {
         capturedAt = System.currentTimeMillis();
     }
 
-    /** Emits sparks while a Better Combat swing runs, and lingering movement sparks while moving. */
+    /**
+     * Emits sparks while a Better Combat swing runs, lingering sparks while moving, and a very light
+     * ambient trickle otherwise (also for weapons lying on the ground or in display frames).
+     */
     public static void tick(Minecraft minecraft) {
         WeaponGlowConfig config = WeaponGlowConfig.get();
         if (!config.enabled) {
@@ -128,6 +132,9 @@ public final class WeaponTrailFx {
         }
         if (config.motion.particles && config.motion.particlesPerTick > 0) {
             emitMotionSparks(minecraft, config);
+        }
+        if (config.idle.particles && config.idle.particlesPerEmit > 0) {
+            emitIdleSparks(minecraft, config);
         }
     }
 
@@ -164,7 +171,7 @@ public final class WeaponTrailFx {
             return false;
         }
         WeaponGlowConfig.Trail trail = config.trail;
-        ParticleOptions type = resolveParticle(trail.particle);
+        List<ParticleOptions> types = resolveParticleVariants(trail.variants, trail.particle);
         GlowSparkParticle.nextScale = (float) trail.particleScale;
         GlowSparkParticle.nextLifetime = trail.particleLifetimeTicks;
         RandomSource random = RandomSource.create();
@@ -177,7 +184,7 @@ public final class WeaponTrailFx {
             double vx = (random.nextDouble() - 0.5D) * trail.speed * 2.0D;
             double vy = (random.nextDouble() - 0.5D) * trail.speed * 2.0D;
             double vz = (random.nextDouble() - 0.5D) * trail.speed * 2.0D;
-            level.addParticle(type, x, y, z, vx, vy, vz);
+            level.addParticle(pick(types, random), x, y, z, vx, vy, vz);
         }
         return true;
     }
@@ -207,7 +214,7 @@ public final class WeaponTrailFx {
             return;
         }
         WeaponGlowConfig.Motion motion = config.motion;
-        ParticleOptions type = resolveParticle(config.trail.particle);
+        List<ParticleOptions> types = resolveParticleVariants(motion.variants, config.trail.particle);
         GlowSparkParticle.nextScale = (float) motion.particleScale;
         GlowSparkParticle.nextLifetime = motion.particleLifetimeTicks;
         RandomSource random = RandomSource.create();
@@ -220,19 +227,83 @@ public final class WeaponTrailFx {
             double vx = (random.nextDouble() - 0.5D) * motion.speed * 2.0D;
             double vy = (random.nextDouble() - 0.5D) * motion.speed * 2.0D;
             double vz = (random.nextDouble() - 0.5D) * motion.speed * 2.0D;
-            level.addParticle(type, x, y, z, vx, vy, vz);
+            level.addParticle(pick(types, random), x, y, z, vx, vy, vz);
         }
     }
 
-    private static ParticleOptions resolveParticle(String id) {
-        ResourceLocation location = ResourceLocation.tryParse(id);
-        if (location != null) {
-            ParticleType<?> type = BuiltInRegistries.PARTICLE_TYPE.get(location);
-            if (type instanceof ParticleOptions options) {
-                return options;
+    /**
+     * Very light ambient trickle at the blade, also while standing still. It runs for whichever
+     * arsenal weapon was rendered most recently, which covers the held weapon as well as weapons
+     * lying on the ground, in item frames or on shelf/display contexts.
+     */
+    private static void emitIdleSparks(Minecraft minecraft, WeaponGlowConfig config) {
+        Level level = minecraft.level;
+        if (level == null) {
+            return;
+        }
+        if (bladeA == null || bladeB == null || System.currentTimeMillis() - capturedAt > 500L) {
+            return;
+        }
+        if (++idleTickCounter % config.idle.intervalTicks != 0) {
+            return;
+        }
+        WeaponGlowConfig.Idle idle = config.idle;
+        List<ParticleOptions> types = resolveParticleVariants(idle.variants, config.trail.particle);
+        GlowSparkParticle.nextScale = (float) idle.particleScale;
+        GlowSparkParticle.nextLifetime = idle.particleLifetimeTicks;
+        RandomSource random = RandomSource.create();
+        for (int i = 0; i < idle.particlesPerEmit; i++) {
+            double t = random.nextDouble();
+            Vec3 point = bladeA.lerp(bladeB, t);
+            double x = point.x + (random.nextDouble() - 0.5D) * idle.spread * 2.0D;
+            double y = point.y + (random.nextDouble() - 0.5D) * idle.spread * 2.0D;
+            double z = point.z + (random.nextDouble() - 0.5D) * idle.spread * 2.0D;
+            double vx = (random.nextDouble() - 0.5D) * idle.speed * 2.0D;
+            double vy = (random.nextDouble() - 0.5D) * idle.speed * 2.0D;
+            double vz = (random.nextDouble() - 0.5D) * idle.speed * 2.0D;
+            level.addParticle(pick(types, random), x, y, z, vx, vy, vz);
+        }
+    }
+
+    private static ParticleOptions pick(List<ParticleOptions> types, RandomSource random) {
+        return types.get(random.nextInt(types.size()));
+    }
+
+    /**
+     * Resolves the configured variant list into particle options; empty/invalid entries are skipped
+     * and the fallback id is used when nothing resolves.
+     */
+    private static List<ParticleOptions> resolveParticleVariants(List<String> variants, String fallback) {
+        List<ParticleOptions> resolved = new ArrayList<>();
+        if (variants != null) {
+            for (String variant : variants) {
+                ParticleOptions options = tryResolveParticle(variant);
+                if (options != null) {
+                    resolved.add(options);
+                }
             }
         }
-        return ParticleTypes.END_ROD;
+        if (resolved.isEmpty()) {
+            resolved.add(resolveParticle(fallback));
+        }
+        return resolved;
+    }
+
+    private static ParticleOptions tryResolveParticle(String id) {
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        if (location == null) {
+            return null;
+        }
+        ParticleType<?> type = BuiltInRegistries.PARTICLE_TYPE.get(location);
+        return type instanceof ParticleOptions options ? options : null;
+    }
+
+    private static ParticleOptions resolveParticle(String id) {
+        ParticleOptions options = tryResolveParticle(id);
+        return options != null ? options : ParticleTypes.END_ROD;
     }
 
     private static Vec3 toWorld(Matrix4f matrix, Vec3 point, boolean firstPerson, Camera camera) {
@@ -249,6 +320,12 @@ public final class WeaponTrailFx {
 
     private static boolean holdingArsenalWeapon(LocalPlayer player) {
         return isArsenalWeapon(player.getMainHandItem()) || isArsenalWeapon(player.getOffhandItem());
+    }
+
+    /** True when this exact stack is in one of the local player's hands (not another entity's). */
+    private static boolean isLocalPlayerWeapon(LocalPlayer player, ItemStack stack) {
+        return ItemStack.isSameItemSameComponents(stack, player.getMainHandItem())
+                || ItemStack.isSameItemSameComponents(stack, player.getOffhandItem());
     }
 
     private static boolean isArsenalWeapon(ItemStack stack) {

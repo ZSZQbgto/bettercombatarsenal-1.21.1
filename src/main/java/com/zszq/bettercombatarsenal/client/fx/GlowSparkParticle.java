@@ -30,7 +30,7 @@ public final class GlowSparkParticle extends TextureSheetParticle {
 
     private GlowSparkParticle(ClientLevel level, double x, double y, double z,
                               double vx, double vy, double vz, SpriteSet sprites,
-                              float scale, int lifetime) {
+                              float scale, int lifetime, float red, float green, float blue) {
         super(level, x, y, z, 0.0D, 0.0D, 0.0D);
         this.sprites = sprites;
         this.xd = vx;
@@ -42,7 +42,7 @@ public final class GlowSparkParticle extends TextureSheetParticle {
         this.quadSize = scale;
         this.lifetime = Math.max(1, lifetime);
         this.setSpriteFromAge(sprites);
-        this.setColor(1.0F, 1.0F, 1.0F);
+        this.setColor(red, green, blue);
         this.setAlpha(1.0F);
     }
 
@@ -71,13 +71,26 @@ public final class GlowSparkParticle extends TextureSheetParticle {
         return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
 
-    /** Provider registered for {@code bettercombatarsenal:glow_spark}. */
+    /** Provider registered for one {@code bettercombatarsenal:glow_*} spark type. */
     public static final class Provider implements ParticleProvider<SimpleParticleType> {
 
         private final SpriteSet sprites;
+        private final float red;
+        private final float green;
+        private final float blue;
+        private final float scaleMultiplier;
 
         public Provider(SpriteSet sprites) {
+            this(sprites, 1.0F, 1.0F, 1.0F, 1.0F);
+        }
+
+        public Provider(SpriteSet sprites, float red, float green, float blue,
+                        float scaleMultiplier) {
             this.sprites = sprites;
+            this.red = red;
+            this.green = green;
+            this.blue = blue;
+            this.scaleMultiplier = scaleMultiplier;
         }
 
         @Override
@@ -85,7 +98,7 @@ public final class GlowSparkParticle extends TextureSheetParticle {
                                        double x, double y, double z,
                                        double vx, double vy, double vz) {
             return new GlowSparkParticle(level, x, y, z, vx, vy, vz, this.sprites,
-                    nextScale, nextLifetime);
+                    nextScale * this.scaleMultiplier, nextLifetime, this.red, this.green, this.blue);
         }
     }
 }

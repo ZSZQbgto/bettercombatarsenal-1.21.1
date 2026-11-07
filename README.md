@@ -28,8 +28,12 @@ registration code.
   `trail_appearance` with `glows: true`, so Better Combat's built-in slash trail is self-lit too.
 - **Trail sparks**: while a Better Combat weapon swing is running, small full-bright sparks are
   emitted along the blade and fade out over 0.5 s; normal/vanilla swings never emit them. While the
-  player moves, a few longer-lived sparks (2–3 s) are left behind where the blade swept. Amount,
+  player moves, a few longer-lived sparks (2–3 s) are left behind where the blade swept, and even
+  when standing still a very light ambient trickle keeps the blade faintly glowing. Amount,
   size, lifetime, spread and velocity are configurable.
+- **Glow everywhere**: first person, third person, dropped items, item frames and shelf/display
+  contexts all show the glowing blade; the first-person overlay is drawn in the hand model's own
+  render pass so it stays visible while the weapon is perfectly still.
 - **Sodium / Iris friendly**: without shaders the overlay uses an additive, full-bright layer; as
   soon as an Iris shader pack is active it automatically switches to the vanilla
   `entity_translucent_emissive` layer (a self-lit render type shader packs already handle). Iris is
@@ -97,6 +101,15 @@ re-applied within about a second after editing):
     "minSpeed": 0.05,
     "spread": 0.04,
     "speed": 0.0
+  },
+  "idle": {
+    "particles": true,
+    "intervalTicks": 8,
+    "particlesPerEmit": 1,
+    "particleLifetimeTicks": 40,
+    "particleScale": 0.04,
+    "spread": 0.03,
+    "speed": 0.0
   }
 }
 ```
@@ -121,6 +134,21 @@ re-applied within about a second after editing):
 | `motion.particleScale` | Lingering spark size |
 | `motion.minSpeed` | Minimum horizontal speed (blocks/tick) before sparks appear |
 | `motion.spread` / `motion.speed` | Jitter / velocity (`0` = the spark stays where the blade passed) |
+| `idle.particles` | Very light ambient trickle at the blade **also while standing still** |
+| `idle.intervalTicks` / `idle.particlesPerEmit` | One spark every 8 ticks by default (subtle) |
+| `idle.particleLifetimeTicks` | Idle spark lifetime; `40` = 2 s |
+| `idle.particleScale` | Idle spark size |
+| `idle.spread` / `idle.speed` | Jitter / velocity (`0` = stays at the blade) |
+
+The blade glow and the idle trickle are drawn for **every** display context: first person,
+third person (left and right hand), dropped items, item frames and shelf/display mods. In first person, drawing from inside the hand renderer cannot work under Iris: the shader pack owns
+blending in that pass, so an additive overlay comes out flat grey or ends up behind the hand model.
+The Iris adaptation therefore captures the item pose, modelview and projection while each hand is
+drawn and paints the glow **after** the hands (GUI pre phase) with the normal additive, full-bright
+layer. Main hand and offhand are tracked separately, so both glow. The deferred layer keeps depth
+testing and back-face culling (no polygon offset), so the glow only appears on the visible blade
+surface and never shines through the weapon model. No extra model or texture files are needed —
+the supplied assets are used unchanged.
 
 ### Better Combat slash trail
 
@@ -147,10 +175,21 @@ glow render path); the colours are Better Combat's default trail colours, so onl
 from the default look. Because this is datapack data, it keeps working without any code hook and
 can be tuned per weapon.
 
-The extra sparks are client-side only and use a small custom full-bright particle
-(`bettercombatarsenal:glow_spark`, vanilla `glow` sprite). The blade position is captured from the
-`_fx` overlay model while the local player's weapon is rendered, so the sparks follow the real blade
-in first and third person. Two emitters exist:
+The extra sparks are client-side only. There are five full-bright spark styles, all pure white (no tint)
+with the same fade-out behaviour but different vanilla sprites:
+
+| Particle id | Sprite | Look |
+|---|---|---|
+| `bettercombatarsenal:glow_spark` | vanilla `glow` | plain star spark |
+| `bettercombatarsenal:glow_glitter` | vanilla `glitter_*` | animated end-rod twinkle, white |
+| `bettercombatarsenal:glow_sparkle` | vanilla `spark_*` | animated firework spark, white |
+| `bettercombatarsenal:glow_crit` | vanilla `critical_hit` | crisp crit flash, white |
+| `bettercombatarsenal:glow_magic` | vanilla `enchanted_hit` | soft glint, white |
+
+Each emitter (`trail`, `motion`, `idle`) has a `variants` list; when it is not empty a random entry
+is picked for every spark, so the styles mix. Empty list = fall back to the single `particle` id. The blade position is captured from the
+`_fx` overlay model while any arsenal weapon is rendered, so the sparks follow the real blade in
+first and third person, and also for dropped items / display contexts. Three emitters exist:
 
 - **Attack sparks**: only while Better Combat reports a weapon swing in progress
   (`MinecraftClient_BetterCombat.isWeaponSwingInProgress()`, looked up reflectively so Better Combat
@@ -159,6 +198,9 @@ in first and third person. Two emitters exist:
   latter half. Default: 5 sparks per tick, 0.5 s lifetime.
 - **Movement sparks**: while the player is moving, a few longer-lived sparks (default 1 every 2 ticks,
   2.5 s lifetime) stay where the blade swept and fade out naturally.
+- **Idle sparks**: a very light trickle (default one spark every 8 ticks, 2 s lifetime) at the blade
+  even when nothing is moving — including when the weapon is lying on the ground, in an item frame
+  or on a shelf.
 
 Compatibility notes:
 
@@ -437,12 +479,14 @@ loader wrapper are the only model files written by this project.
 Verified on this checkout with Minecraft 1.21.1 + NeoForge 21.1.265:
 
 - `.\gradlew.bat build` → `BUILD SUCCESSFUL`; jar
-  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `15721B8E…30DA`).
-- Updated supplied assets are included byte-identically: `resourcepacks/block/twinblade.json` →
-  `assets/bettercombatarsenal/geometry/twinblade.json` (SHA256 `C45F1CCC…`), the re-exported
-  `resourcepacks/texture/twinblade.png` → `textures/block/twinblade.png` (`64B9BD06…`), and the four
-  `<weapon>_blade.png` masks → `textures/item/<weapon>_blade.png`; no file under
-  `C:\DSHhome\resourcepacks` is written to and no supplied model or texture was edited.
+  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `E10FB17B…A50C`).
+- Updated supplied assets are included byte-identically: `resourcepacks/block/claymore.json` →
+  `assets/bettercombatarsenal/models/item/claymore_geometry.json` (SHA256 `DB27C17E…`, latest re-export; display transforms kept in sync in `models/item/claymore.json`),
+  `resourcepacks/block/twinblade.json` → `assets/bettercombatarsenal/geometry/twinblade.json`
+  (SHA256 `C45F1CCC…`), the re-exported `resourcepacks/texture/twinblade.png` →
+  `textures/block/twinblade.png` (`64B9BD06…`), and the four `<weapon>_blade.png` masks →
+  `textures/item/<weapon>_blade.png`; no file under `C:\DSHhome\resourcepacks` is written to and no
+  supplied model or texture was edited.
 - Trail data validated against Better Combat 2.4.0 itself: `WeaponAttributesHelper.decode(...)`
   accepts all four updated `weapon_attributes/*.json`, and after Better Combat's own
   `ConditionalTrailAppearance.merge(...)` the resolved appearance is
