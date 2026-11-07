@@ -66,6 +66,13 @@ public final class ArsenalItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         BakedModel model = Minecraft.getInstance().getModelManager()
                 .getModel(ModelResourceLocation.standalone(modelId));
+        if (thumbnail && model == Minecraft.getInstance().getModelManager().getMissingModel()) {
+            // No supplied 16x16 icon for this weapon: fall back to the 3D model in the GUI.
+            ResourceLocation fallbackId = ResourceLocation.fromNamespaceAndPath(
+                    itemId.getNamespace(), "item/" + itemId.getPath() + "_3d");
+            model = Minecraft.getInstance().getModelManager()
+                    .getModel(ModelResourceLocation.standalone(fallbackId));
+        }
         VertexConsumer buffer = ItemRenderer.getFoilBufferDirect(
                 bufferSource, Sheets.translucentItemSheet(), true, stack.hasFoil());
         Minecraft.getInstance().getItemRenderer()

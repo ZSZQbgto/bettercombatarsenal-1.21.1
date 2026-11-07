@@ -13,7 +13,10 @@ Better Combat weapon presets. Weapon definitions are data-driven, so the arsenal
 without touching the registration code.
 '''
 
-# No mixins are used by this mod.
+# Optional Better Combat integration: the jump-attack override mixin is only applied when Better
+# Combat is loaded (guarded by a mixin config plugin inside the config).
+[[mixins]]
+    config="bettercombatarsenal.mixins.json"
 
 [[dependencies.${mod_id}]]
     modId="neoforge"

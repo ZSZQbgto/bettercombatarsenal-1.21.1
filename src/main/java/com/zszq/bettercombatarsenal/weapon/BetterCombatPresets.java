@@ -30,6 +30,9 @@ public final class BetterCombatPresets {
     /** Two-handed twin blade preset: alternating switch-blade slashes, category {@code twin_blade}. */
     public static final ResourceLocation TWIN_BLADE = of("twin_blade");
 
+    /** Two-handed katana preset: alternating vertical/horizontal slashes, category {@code katana}. */
+    public static final ResourceLocation KATANA = of("katana");
+
     private BetterCombatPresets() {
     }
 

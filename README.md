@@ -1,12 +1,12 @@
-﻿# Better Combat Arsenal
+# Better Combat Arsenal
 
 A small, data-driven NeoForge weapon mod for Minecraft **1.21.1** whose melee weapons use
 [Better Combat](https://modrinth.com/mod/better-combat) weapon presets for their attack
 animations.
 
-It currently ships four weapons — a one-handed **Sword**, two-handed **Claymore**, **Twin Blade**
-and **Double Axe** — and is structured so more weapons can be added without touching the
-registration code.
+It currently ships five weapons — a one-handed **Sword**, two-handed **Claymore**, **Twin Blade**,
+**Double Axe** and **Hengdao** — and is structured so more weapons can be added without touching
+the registration code.
 
 ## Features
 
@@ -16,6 +16,7 @@ registration code.
 | Claymore | `bettercombatarsenal:claymore` | `bettercombat:claymore` (two-handed: wide slash, thrust, overhead slam) | Iron tier, 8 attack damage, 0.8 attack speed, +0.35 attack range |
 | Twin Blade | `bettercombatarsenal:twinblade` | `bettercombat:twin_blade` (two-handed: alternating switch-blade slashes) | Iron tier, 7 attack damage, 1.2 attack speed |
 | Double Axe | `bettercombatarsenal:doubleaxe` | `bettercombat:double_axe` (two-handed: wide slash + 360° spin) | Iron tier, 9 attack damage, 0.6 attack speed |
+| Hengdao | `bettercombatarsenal:hengdao` | `bettercombat:katana` (two-handed: alternating vertical/horizontal katana slashes) | Iron tier, 5.5 attack damage, 1.0 attack speed |
 
 - Dedicated **Better Combat Arsenal** creative tab, plus entries in the vanilla Combat tab.
 - **2D GUI thumbnails**: the supplied 16×16 icons from `resourcepacks/item` are used *only* for the
@@ -34,6 +35,19 @@ registration code.
 - **Glow everywhere**: first person, third person, dropped items, item frames and shelf/display
   contexts all show the glowing blade; the first-person overlay is drawn in the hand model's own
   render pass so it stays visible while the weapon is perfectly still.
+- **Jump attack**: strict rule — only an attack performed **after an actual jump and at or before the
+  jump apex** (vertical velocity still `>= 0`) is a jump attack; attacking after the apex (already
+  falling) is a normal attack, and attacking first and jumping afterwards never becomes a jump attack.
+  A jump attack plays the claymore's final overhead slam animation instead of the weapon's own attack,
+  while the swing/impact **sound stays the weapon's own**. Each jump attack interrupts and resets the
+  combo chain (the next ground attack starts at the first combo step). Hits from a jump
+  attack knock the target back by a weapon-class dependent amount (sword 0.35, twin blade 0.45,
+  hengdao 0.55, claymore 0.85, double axe 1.0). A jump attack starts a jump cooldown equal to the
+  weapon's Better Combat attack cooldown (at least 10 ticks); only the **first half** of it blocks
+  jumping (client mixin cancels `jumpFromGround` for the local player holding an arsenal weapon), so
+  the player can jump again during the second half. Attacks are never gated. This is a small optional
+  mixin into Better Combat's attack selection plus a jump-blocking mixin, and is only active when
+  Better Combat is installed.
 - **Sodium / Iris friendly**: without shaders the overlay uses an additive, full-bright layer; as
   soon as an Iris shader pack is active it automatically switches to the vanilla
   `entity_translucent_emissive` layer (a self-lit render type shader packs already handle). Iris is
@@ -61,6 +75,10 @@ The visible item model (`models/item/<id>.json`) is a `builtin/entity` model car
 display transforms, so vanilla applies the hand/ground transform before the renderer draws. The two
 additional models are registered generically for every catalogue weapon by `client/ArsenalClient`,
 which means future weapons need no Java changes.
+
+The `builtin/entity` model intentionally has **no `gui` display entry** (only `thirdperson_*`,
+`firstperson_*`, `ground` and `fixed`): the GUI transform is applied by vanilla before the renderer
+runs, so a `gui` entry would rotate/scale the supplied 16×16 icon as well.
 
 ## Blade glow
 
@@ -233,12 +251,18 @@ a Better Combat preset player animation.
 | Twin Blade | switch-blade slash left | `HORIZONTAL_PLANE` | 1.00 | 150° | 0.5 | `bettercombat:one_handed_slash_switch_blade_left` / `sword_slash` |
 | Double Axe | wide horizontal slash | `HORIZONTAL_PLANE` | 1.00 | 180° | 0.5 | `bettercombat:two_handed_slash_horizontal_right` / `double_axe_swing` |
 | Double Axe | 360° spin | `HORIZONTAL_PLANE` | 1.00 | 360° | 0.5 | `bettercombat:two_handed_spin` / `double_axe_swing` (pitch 1.1) |
+| Hengdao | horizontal right slash | `HORIZONTAL_PLANE` | 0.80 | 120° | 0.5 | `bettercombat:two_handed_slash_horizontal_right` / `katana_slash` |
+| Hengdao | vertical left slash | `VERTICAL_PLANE` | 1.20 | 120° | 0.5 | `bettercombat:two_handed_slash_vertical_left` / `katana_slash` (pitch 1.05) |
+| Hengdao | vertical right slash | `VERTICAL_PLANE` | 1.20 | 120° | 0.5 | `bettercombat:two_handed_slash_vertical_right` / `katana_slash` (pitch 0.95) |
+| Hengdao | horizontal left slash | `HORIZONTAL_PLANE` | 0.80 | 120° | 0.5 | `bettercombat:two_handed_slash_horizontal_left` / `katana_slash` |
 
 Sword: one-handed, category `sword`, no range bonus. Claymore: two-handed, category `claymore`,
 `bettercombat:pose_two_handed_sword`, +0.35 attack range. Twin blade: two-handed, category
 `twin_blade`, `bettercombat:pose_two_handed_katana`, no range bonus; two alternating 150°
 switch-blade slashes. Double axe: two-handed, category `double_axe`, no range bonus; 180° slash
-plus a 360° spin. Tuning any of these values is a pure data-pack change.
+plus a 360° spin. Hengdao: two-handed, category `katana`, pose `bettercombat:pose_two_handed_katana`, no
+range bonus; alternating vertical/horizontal katana slashes (it uses Better Combat's katana preset but
+keeps its own name/id `hengdao`). Tuning any of these values is a pure data-pack change.
 
 ## Requirements
 
@@ -317,6 +341,12 @@ The optional dependency is declared in `META-INF/neoforge.mods.toml` with `type=
 `ordering="AFTER"`, so load order is correct when Better Combat is present and nothing breaks
 when it is absent. At startup the mod logs each weapon's preset mapping; a warning is printed when
 Better Combat is missing.
+
+One small exception to the pure-data rule is the airborne jump attack: Better Combat has no
+airborne attack condition, so `compat/JumpAttackHandler` (all Better Combat types are reached
+reflectively) plus `mixin/bettercombat/PlayerAttackHelperMixin` replace the selected attack with
+the claymore's last attack while the player is not on the ground. `ArsenalMixinPlugin` only applies
+that mixin when Better Combat is loaded, so the mod still compiles, loads and runs without it.
 
 ## Architecture / adding a weapon
 
@@ -421,6 +451,10 @@ included **byte-for-byte** (no model or texture content was edited):
 | `resourcepacks/texture/sword.png` | `assets/bettercombatarsenal/textures/item/sword.png` | 64×64 3D model texture |
 | `resourcepacks/texture/twinblade.png` | `assets/bettercombatarsenal/textures/block/twinblade.png` | 64×64 3D model texture |
 | `resourcepacks/texture/doubleaxe.png` | `assets/bettercombatarsenal/textures/block/doubleaxe.png` | 128×128 3D model texture |
+| `resourcepacks/block/hengdao.json` | `assets/bettercombatarsenal/models/item/hengdao_geometry.json` | unchanged geometry + display states |
+| `resourcepacks/texture/hengdao.png` | `assets/bettercombatarsenal/textures/block/hengdao.png` | 3D model texture |
+| `resourcepacks/texture/hengdao_blade.png` | `assets/bettercombatarsenal/textures/item/hengdao_blade.png` | blade glow mask (used only by `item/hengdao_fx`) |
+| `resourcepacks/item/hengdao.png` | `assets/bettercombatarsenal/textures/item/hengdao.png` | 16×16 GUI thumbnail (used by `item/hengdao_thumbnail`) |
 | `resourcepacks/item/claymore.png` | `assets/bettercombatarsenal/textures/item/claymore.png` | 16×16 claymore GUI thumbnail (used only by `item/claymore_thumbnail`) |
 | `resourcepacks/item/model.png` | `assets/bettercombatarsenal/textures/item/model.png` | 16×16 sword GUI thumbnail (used only by `item/sword_thumbnail`) |
 | `resourcepacks/item/twinblade.png` | `assets/bettercombatarsenal/textures/item/twinblade.png` | 16×16 twin blade GUI thumbnail (used only by `item/twinblade_thumbnail`) |
@@ -479,7 +513,7 @@ loader wrapper are the only model files written by this project.
 Verified on this checkout with Minecraft 1.21.1 + NeoForge 21.1.265:
 
 - `.\gradlew.bat build` → `BUILD SUCCESSFUL`; jar
-  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `E10FB17B…A50C`).
+  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `CE8EFCC6…B960`).
 - Updated supplied assets are included byte-identically: `resourcepacks/block/claymore.json` →
   `assets/bettercombatarsenal/models/item/claymore_geometry.json` (SHA256 `DB27C17E…`, latest re-export; display transforms kept in sync in `models/item/claymore.json`),
   `resourcepacks/block/twinblade.json` → `assets/bettercombatarsenal/geometry/twinblade.json`
@@ -496,11 +530,12 @@ Verified on this checkout with Minecraft 1.21.1 + NeoForge 21.1.265:
   the bundled optimization/shader stack (Sodium 0.8.13, Sodium Extra 0.9.5, Iris 1.8.14-beta.1,
   Complementary Reimagined active, LambDynamicLights, Leawind third person, ETF/EMF, JEI, ...):
   world joins, Better Combat logs `Loaded container: bettercombatarsenal:sword` / `...claymore` /
-  `...twinblade` / `...doubleaxe`, our log line `Registered 4 arsenal weapon(s)` is printed, the
-  attack hook reports `Better Combat attack hook installed; blade trail particles are active.`, and
+  `...twinblade` / `...doubleaxe`, our log line `Registered 5 arsenal weapon(s)` is printed, the
+  attack hook reports `Better Combat attack hook installed; blade trail particles are active.`, the
+  jump-attack mixin reports `Jump-attack mixin applied: true`, and
   no `Missing textures in model bettercombatarsenal:*`, `Failed to load model` or render-type errors
-  are emitted for this mod.
-- In-game the four weapons render with the supplied 16×16 icons in the GUI only, the full 3D model
+  are emitted for this mod (verified for all five weapons including `Hengdao`).
+- In-game the five weapons render with the supplied 16×16 icons in the GUI only, the full 3D model
   in hand, and the `<weapon>_blade.png` mask lights up the blade (additive layer normally, vanilla
   emissive layer while an Iris shader pack is in use); swings emit the configured glowing particles
   along the blade and Better Combat's slash trail is self-lit.

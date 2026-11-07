@@ -86,8 +86,19 @@ public final class ArsenalClient {
         for (WeaponDefinition weapon : WeaponCatalog.all()) {
             event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_3d")));
             event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_fx")));
-            event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_thumbnail")));
+            if (hasModel(weapon.id() + "_thumbnail")) {
+                event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_thumbnail")));
+            }
         }
+    }
+
+    /**
+     * Weapons without a supplied 16x16 icon have no {@code <id>_thumbnail} model; the renderer then
+     * falls back to the 3D model in the GUI instead of trying to load a missing model.
+     */
+    private static boolean hasModel(String path) {
+        return ArsenalClient.class.getResource(
+                "/assets/" + BetterCombatArsenal.MODID + "/models/item/" + path + ".json") != null;
     }
 
     private void registerClientExtensions(RegisterClientExtensionsEvent event) {

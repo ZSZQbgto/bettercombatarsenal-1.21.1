@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "com.zszq.bettercombatarsenal.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "com.zszq.bettercombatarsenal.mixin.ArsenalMixinPlugin",
+  "mixins": [
+    "bettercombat.PlayerAttackHelperMixin"
+  ],
+  "client": [
+    "LivingEntityJumpMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

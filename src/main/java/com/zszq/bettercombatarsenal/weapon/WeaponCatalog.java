@@ -46,6 +46,12 @@ public final class WeaponCatalog {
                     .attackDamage(4.0F)
                     .attackSpeed(-2.8F)
                     .betterCombatPreset(BetterCombatPresets.TWIN_BLADE)
+                    .build(),
+            WeaponDefinition.builder("hengdao")
+                    .tier(Tiers.IRON)
+                    .attackDamage(4.5F)
+                    .attackSpeed(-3.0F)
+                    .betterCombatPreset(BetterCombatPresets.KATANA)
                     .build());
 
     private static final Map<String, WeaponDefinition> BY_ID;

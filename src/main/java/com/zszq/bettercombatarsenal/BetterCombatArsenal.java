@@ -34,12 +34,17 @@ public final class BetterCombatArsenal {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::addCreativeTabContents);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.bettercombatarsenal.compat.JumpAttackKnockback::onIncomingDamage);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.bettercombatarsenal.compat.JumpAttackHandler::onLivingJump);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             LOGGER.info("Registered {} arsenal weapon(s): {}", ModItems.all().size(), ModItems.ids());
             BetterCombatIntegration.reportStatus();
+            com.zszq.bettercombatarsenal.compat.JumpAttackHandler.reportStatus();
         });
     }
 
