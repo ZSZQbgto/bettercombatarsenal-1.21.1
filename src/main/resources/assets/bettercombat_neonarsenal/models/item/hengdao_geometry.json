@@ -232,11 +232,11 @@
 	"display": {
 		"thirdperson_righthand": {
 			"rotation": [0, 90, 0],
-			"translation": [0, 9.25, 2]
+			"translation": [0, 10.5, 2]
 		},
 		"thirdperson_lefthand": {
 			"rotation": [0, -90, 0],
-			"translation": [0, 9.25, 2]
+			"translation": [0, 10.5, 2]
 		},
 		"firstperson_righthand": {
 			"rotation": [0, 90, -20],

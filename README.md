@@ -88,7 +88,7 @@
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-1.0.0.jar
-# 176,776 B · SHA256 56B06816…088B
+# 176,790 B · SHA256 7CBECD57…FC8E
 ```
 
 ## 许可
@@ -188,7 +188,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-1.0.0.jar
-# 176,776 B · SHA256 56B06816…088B
+# 176,790 B · SHA256 7CBECD57…FC8E
 ```
 
 ## License
