@@ -71,7 +71,7 @@
 | 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.2 | 9.2 | 11 | 双手连段 |
 | 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | 双手旋转斩 |
 | 横刀 | `bettercombat_neonarsenal:hengdao` | 1.0 | 11.0 | 11 | 双手拔刀斩 |
-| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.2 | 4.6 | 10 | 单手快刺 |
+| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.2 | 4.8 | 10 | 单手快刺 |
 
 ## 工艺速查
 
@@ -88,7 +88,7 @@
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-alpha1.jar
-# 176,795 B · SHA256 4B364CA0…102F
+# 176,794 B · SHA256 4BF2672F…C72E
 ```
 
 ## 许可
@@ -171,7 +171,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 | Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.2 | 9.2 | 11 | Two-handed combo |
 | Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | Two-handed spin |
 | Hengdao | `bettercombat_neonarsenal:hengdao` | 1.0 | 11.0 | 11 | Two-handed draw slashes |
-| Rapier | `bettercombat_neonarsenal:rapier` | 2.2 | 4.6 | 10 | One-handed fast thrusts |
+| Rapier | `bettercombat_neonarsenal:rapier` | 2.2 | 4.8 | 10 | One-handed fast thrusts |
 
 ## Quick reference
 
@@ -188,7 +188,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-alpha1.jar
-# 176,795 B · SHA256 4B364CA0…102F
+# 176,794 B · SHA256 4BF2672F…C72E
 ```
 
 ## License
