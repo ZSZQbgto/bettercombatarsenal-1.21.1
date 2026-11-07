@@ -1,0 +1,7 @@
+{
+  "parent": "bettercombat_neonarsenal:item/claymore_geometry",
+  "textures": {
+    "1": "bettercombat_neonarsenal:blade/claymore_blade",
+    "particle": "bettercombat_neonarsenal:blade/claymore_blade"
+  }
+}

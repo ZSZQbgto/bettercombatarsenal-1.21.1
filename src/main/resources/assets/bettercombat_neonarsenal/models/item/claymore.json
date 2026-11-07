@@ -1,0 +1,34 @@
+{
+  "parent": "builtin/entity",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:weapon/claymore"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, 90, 0],
+      "translation": [0, 9.25, 2]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 90, 0],
+      "translation": [0, 9.25, 2]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, 90, -20],
+      "translation": [6, 0, 0]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 90, -20],
+      "translation": [6, 0, 0]
+    },
+    "ground": {
+      "rotation": [-180, 0, 0],
+      "translation": [0, 17, 0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    "fixed": {
+      "rotation": [0, 0, 45],
+      "translation": [2, -2, 0],
+      "scale": [0.7, 0.7, 0.7]
+    }
+  }
+}

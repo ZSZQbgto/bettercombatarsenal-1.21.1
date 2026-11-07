@@ -1,0 +1,31 @@
+{
+  "parent": "builtin/entity",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:weapon/twinblade"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, 90, 0],
+      "translation": [0, -2, 2]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, -90, 0],
+      "translation": [0, -2, 2]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, 90, -20],
+      "translation": [6, 0, 0]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, -90, 20],
+      "translation": [6, 0, 0]
+    },
+    "ground": {
+      "translation": [0, 20, 0]
+    },
+    "fixed": {
+      "rotation": [0, 0, 45],
+      "scale": [0.55, 0.55, 0.55]
+    }
+  }
+}

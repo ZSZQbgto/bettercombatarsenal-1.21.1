@@ -5,10 +5,10 @@ license="${mod_license}"
 [[mods]]
 modId="${mod_id}"
 version="${mod_version}"
-displayName="${mod_name}"
+displayName="BetterCombat:NeonArsenal"
 authors="zszq"
 description='''
-Better Combat Arsenal adds melee weapons whose attack animations are supplied by
+BetterCombat:NeonArsenal adds melee weapons whose attack animations are supplied by
 Better Combat weapon presets. Weapon definitions are data-driven, so the arsenal can grow
 without touching the registration code.
 '''
@@ -16,7 +16,7 @@ without touching the registration code.
 # Optional Better Combat integration: the jump-attack override mixin is only applied when Better
 # Combat is loaded (guarded by a mixin config plugin inside the config).
 [[mixins]]
-    config="bettercombatarsenal.mixins.json"
+    config="bettercombat_neonarsenal.mixins.json"
 
 [[dependencies.${mod_id}]]
     modId="neoforge"
@@ -32,13 +32,12 @@ without touching the registration code.
     ordering="NONE"
     side="BOTH"
 
-# Optional integration. Better Combat is only linked through datapack files
-# (data/bettercombatarsenal/weapon_attributes/<weapon>.json), so the mod also runs
-# without it and simply falls back to vanilla combat behaviour.
+# Required dependency: the arsenal weapons use Better Combat attack presets, hit boxes and
+# two-handed rules (linked through data/bettercombat_neonarsenal/weapon_attributes/<weapon>.json).
 [[dependencies.${mod_id}]]
     modId="bettercombat"
-    type="optional"
+    type="required"
     versionRange="[2.0.0,)"
     ordering="AFTER"
     side="BOTH"
-    reason="Provides the melee attack animation presets used by the arsenal weapons."
+    reason="Required: provides the melee attack animation presets used by the arsenal weapons."

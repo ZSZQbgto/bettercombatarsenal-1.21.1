@@ -1,10 +1,10 @@
 {
   "replace": false,
   "values": [
-    "bettercombatarsenal:claymore",
-    "bettercombatarsenal:hengdao",
-    "bettercombatarsenal:rapier",
-    "bettercombatarsenal:sword",
-    "bettercombatarsenal:twinblade"
+    "bettercombat_neonarsenal:claymore",
+    "bettercombat_neonarsenal:hengdao",
+    "bettercombat_neonarsenal:rapier",
+    "bettercombat_neonarsenal:sword",
+    "bettercombat_neonarsenal:twinblade"
   ]
 }

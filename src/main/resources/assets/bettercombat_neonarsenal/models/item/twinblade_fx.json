@@ -1,0 +1,8 @@
+{
+  "loader": "bettercombat_neonarsenal:permissive_model",
+  "source": "bettercombat_neonarsenal:geometry/twinblade",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:blade/twinblade_blade",
+    "1": "bettercombat_neonarsenal:blade/twinblade_blade"
+  }
+}

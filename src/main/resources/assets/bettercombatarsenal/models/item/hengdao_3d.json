@@ -1,7 +1,0 @@
-{
-  "parent": "bettercombatarsenal:item/hengdao_geometry",
-  "textures": {
-    "0": "bettercombatarsenal:weapon/hengdao",
-    "particle": "bettercombatarsenal:weapon/hengdao"
-  }
-}

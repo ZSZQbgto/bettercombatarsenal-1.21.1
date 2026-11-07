@@ -1,0 +1,187 @@
+package com.zszq.neonarsenal.item;
+
+import java.lang.reflect.Method;
+import java.util.List;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.TooltipFlag;
+
+/**
+ * A non-damageable arsenal weapon: no durability, never breaks, and carries a sharpness index plus
+ * forge layers.
+ *
+ * <p>Tooltip: a compact summary is always shown; holding <b>Shift</b> additionally shows the final
+ * total stats and a description of every forge effect. The text is fully localised (EN/ZH).</p>
+ */
+public class SharpnessWeaponItem extends Item {
+
+    private static final String PREFIX = "tooltip.bettercombat_neonarsenal.";
+    private static Method hasShiftDown;
+    private static boolean shiftLookupTried;
+
+    private final Tier tier;
+
+    public SharpnessWeaponItem(Tier tier, Item.Properties properties) {
+        super(properties);
+        this.tier = tier;
+    }
+
+    @Override
+    public int getEnchantmentValue() {
+        return this.tier.getEnchantmentValue();
+    }
+
+    @Override
+    public boolean canGrindstoneRepair(ItemStack stack) {
+        return true;
+    }
+
+    @Override
+    public boolean isValidRepairItem(ItemStack stack, ItemStack repair) {
+        return repair.is(Items.HONEYCOMB) || super.isValidRepairItem(stack, repair);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context,
+                                List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        int sharpness = Sharpness.get(stack);
+        ChatFormatting sharpnessColor = sharpness >= Sharpness.MAX * 3 / 4 ? ChatFormatting.GREEN
+                : sharpness >= Sharpness.MAX / 4 ? ChatFormatting.YELLOW : ChatFormatting.RED;
+        tooltip.add(Component.translatable(PREFIX + "sharpness", sharpness, Sharpness.MAX)
+                .withStyle(sharpnessColor));
+        int dye = Forge.dyeColor(stack);
+        if (dye >= 0) {
+            tooltip.add(Component.translatable(PREFIX + "dye", String.format("%06X", dye))
+                    .withStyle(style -> style.withColor(dye)));
+        }
+        List<String> layers = Forge.layers(stack);
+        if (layers.isEmpty()) {
+            tooltip.add(Component.translatable(PREFIX + "not_forged").withStyle(ChatFormatting.DARK_GRAY));
+            return;
+        }
+
+        if (!shiftDown()) {
+            Component names = Component.empty();
+            for (int i = 0; i < layers.size(); i++) {
+                if (i > 0) {
+                    names = names.copy().append(Component.literal(" + ").withStyle(ChatFormatting.DARK_GRAY));
+                }
+                String layer = layers.get(i);
+                names = names.copy().append(Component.translatable(layerNameKey(layer))
+                        .withStyle(style -> style.withColor(Forge.colorOf(layer))));
+            }
+            tooltip.add(Component.translatable(PREFIX + "forge_compact", names).withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable(PREFIX + "hint")
+                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+            return;
+        }
+
+        tooltip.add(Component.translatable(PREFIX + "section_stats").withStyle(ChatFormatting.GOLD));
+        double[] bonus = heldBonuses(layers);
+        addBonusLine(tooltip, "bonus.damage", bonus[0]);
+        addBonusLine(tooltip, "bonus.attack_speed", bonus[1]);
+        addBonusLine(tooltip, "bonus.move_speed", bonus[2]);
+        if (Forge.hasRabbit(stack)) {
+            tooltip.add(Component.translatable(PREFIX + "jump_height").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable(PREFIX + "jump_slam").withStyle(ChatFormatting.GRAY));
+        }
+        long multiplier = Math.round(Sharpness.damageMultiplier(sharpness) * 100.0D);
+        tooltip.add(Component.translatable(PREFIX + "sharpness_multiplier", multiplier)
+                .withStyle(ChatFormatting.GRAY));
+
+        tooltip.add(Component.translatable(PREFIX + "section_forge").withStyle(ChatFormatting.GOLD));
+        for (String layer : layers) {
+            tooltip.add(Component.translatable(layerNameKey(layer))
+                    .withStyle(style -> style.withColor(Forge.colorOf(layer))));
+            for (String key : descriptionKeys(layer)) {
+                tooltip.add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+            }
+        }
+    }
+
+    private static void addBonusLine(List<Component> tooltip, String labelKey, double value) {
+        if (Math.abs(value) < 1.0E-4D) {
+            return;
+        }
+        long percent = Math.round(value * 100.0D);
+        ChatFormatting color = percent >= 0 ? ChatFormatting.GREEN : ChatFormatting.RED;
+        String amount = (percent >= 0 ? "+" : "") + percent + "%";
+        tooltip.add(Component.translatable(PREFIX + "bonus.format",
+                        Component.translatable(PREFIX + labelKey), amount)
+                .withStyle(color));
+    }
+
+    private static String layerNameKey(String layer) {
+        return switch (layer) {
+            case Forge.CHORUS -> PREFIX + "layer.chorus";
+            case Forge.CREEPER -> PREFIX + "layer.creeper";
+            case Forge.RABBIT -> PREFIX + "layer.rabbit";
+            case Forge.ECHO -> PREFIX + "layer.echo";
+            default -> PREFIX + "layer.unknown";
+        };
+    }
+
+    /** Held bonuses of all layers: {damage, attack speed, movement speed}. */
+    private static double[] heldBonuses(List<String> layers) {
+        double damage = 0.0D;
+        double attackSpeed = 0.0D;
+        double moveSpeed = 0.0D;
+        for (String layer : layers) {
+            switch (layer) {
+                case Forge.CHORUS -> {
+                    damage += 0.10D;
+                    moveSpeed += 0.15D;
+                }
+                case Forge.CREEPER -> {
+                    damage += 0.05D;
+                    attackSpeed += 0.15D;
+                }
+                case Forge.RABBIT -> attackSpeed += 0.05D;
+                case Forge.ECHO -> {
+                    attackSpeed -= 0.50D;
+                    damage += 1.00D;
+                }
+                default -> {
+                    // Unknown layer.
+                }
+            }
+        }
+        return new double[] {damage, attackSpeed, moveSpeed};
+    }
+
+    private static List<String> descriptionKeys(String layer) {
+        return switch (layer) {
+            case Forge.CHORUS -> List.of(PREFIX + "forge.chorus.held", PREFIX + "forge.chorus.effect");
+            case Forge.CREEPER -> List.of(PREFIX + "forge.creeper.held", PREFIX + "forge.creeper.effect");
+            case Forge.RABBIT -> List.of(PREFIX + "forge.rabbit.held", PREFIX + "forge.rabbit.effect");
+            case Forge.ECHO -> List.of(PREFIX + "forge.echo.held", PREFIX + "forge.echo.effect");
+            default -> List.of(PREFIX + "layer.unknown");
+        };
+    }
+
+    private static boolean shiftDown() {
+        if (!shiftLookupTried) {
+            shiftLookupTried = true;
+            try {
+                Class<?> screen = Class.forName("net.minecraft.client.gui.screens.Screen");
+                hasShiftDown = screen.getMethod("hasShiftDown");
+            } catch (Throwable ignored) {
+                hasShiftDown = null;
+            }
+        }
+        if (hasShiftDown == null) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(hasShiftDown.invoke(null));
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+}

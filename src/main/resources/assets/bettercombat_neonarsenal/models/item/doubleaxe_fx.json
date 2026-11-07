@@ -1,0 +1,8 @@
+{
+  "loader": "bettercombat_neonarsenal:permissive_model",
+  "source": "bettercombat_neonarsenal:geometry/doubleaxe",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:blade/doubleaxe_blade",
+    "1": "bettercombat_neonarsenal:blade/doubleaxe_blade"
+  }
+}

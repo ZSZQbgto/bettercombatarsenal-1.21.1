@@ -1,0 +1,17 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "com.zszq.neonarsenal.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "com.zszq.neonarsenal.mixin.NeonArsenalMixinPlugin",
+  "mixins": [
+    "bettercombat.PlayerAttackHelperMixin",
+    "bettercombat.SlashParticleUtilMixin"
+  ],
+  "client": [
+    "LivingEntityJumpMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
