@@ -540,7 +540,7 @@ loader wrapper are the only model files written by this project.
 Verified on this checkout with Minecraft 1.21.1 + NeoForge 21.1.265:
 
 - `.\gradlew.bat build` → `BUILD SUCCESSFUL`; jar
-  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `3795BF79…F336`).
+  `build/libs/bettercombatarsenal-1.0.0.jar` (SHA256 `2034F3CF…9600`).
 - Updated supplied assets are included byte-identically: `resourcepacks/block/claymore.json` →
   `assets/bettercombatarsenal/models/item/claymore_geometry.json` (SHA256 `DB27C17E…`, latest re-export; display transforms kept in sync in `models/item/claymore.json`),
   `resourcepacks/block/twinblade.json` → `assets/bettercombatarsenal/geometry/twinblade.json`
