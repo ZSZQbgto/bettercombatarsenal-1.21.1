@@ -68,10 +68,10 @@
 |---|---|---|---|---|---|
 | 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | 单手，最稳 |
 | 阔剑 | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | 双手，+0.35 距离 |
-| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.2 | 9.2 | 11 | 双手连段 |
+| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | 双手连段 |
 | 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | 双手旋转斩 |
-| 横刀 | `bettercombat_neonarsenal:hengdao` | 1.0 | 11.0 | 11 | 双手拔刀斩 |
-| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.3 | 5.0 | 11.5 | 单手快刺 |
+| 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | 双手拔刀斩 |
+| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | 单手快刺 |
 
 ## 工艺速查
 
@@ -88,7 +88,7 @@
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-alpha1.jar
-# 176,790 B · SHA256 880D4C3D…6E09
+# 176,790 B · SHA256 C19EC3EF…6F6E
 ```
 
 ## 许可
@@ -168,10 +168,10 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 |---|---|---|---|---|---|
 | Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | One-handed, steady |
 | Broadsword | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | Two-handed, +0.35 reach |
-| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.2 | 9.2 | 11 | Two-handed combo |
+| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | Two-handed combo |
 | Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | Two-handed spin |
-| Hengdao | `bettercombat_neonarsenal:hengdao` | 1.0 | 11.0 | 11 | Two-handed draw slashes |
-| Rapier | `bettercombat_neonarsenal:rapier` | 2.3 | 5.0 | 11.5 | One-handed fast thrusts |
+| Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | Two-handed draw slashes |
+| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | One-handed fast thrusts |
 
 ## Quick reference
 
@@ -188,7 +188,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-alpha1.jar
-# 176,790 B · SHA256 880D4C3D…6E09
+# 176,790 B · SHA256 C19EC3EF…6F6E
 ```
 
 ## License

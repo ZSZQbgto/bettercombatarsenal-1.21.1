@@ -44,19 +44,19 @@ public final class WeaponCatalog {
             WeaponDefinition.builder("twinblade")
                     .tier(Tiers.IRON)
                     .attackDamage(6.2F)
-                    .attackSpeed(-2.8F)
+                    .attackSpeed(-2.6F)
                     .betterCombatPreset(NeonArsenalPresets.TWIN_BLADE)
                     .build(),
             WeaponDefinition.builder("hengdao")
                     .tier(Tiers.IRON)
                     .attackDamage(8.0F)
-                    .attackSpeed(-3.0F)
+                    .attackSpeed(-2.9F)
                     .betterCombatPreset(NeonArsenalPresets.KATANA)
                     .build(),
             WeaponDefinition.builder("rapier")
                     .tier(Tiers.IRON)
                     .attackDamage(2.0F)
-                    .attackSpeed(-1.7F)
+                    .attackSpeed(-1.8F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
                     .build());
 
