@@ -10,10 +10,8 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ModelResourceLocation;
@@ -79,20 +77,18 @@ public final class WeaponGlow {
                     .setWriteMaskState(RenderStateShard.COLOR_WRITE)
                     .createCompositeState(false));
 
-    /** Self-lit overlay layer handled by Iris shader packs; binds the item atlas explicitly. */
-    private static final RenderType EMISSIVE_LAYER =
-            RenderType.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS);
-
     /**
-     * First-person variant of the Iris-compatible emissive layer. It is the same self-lit render
-     * type (NEW_ENTITY format, entity-translucent-emissive shader) but with polygon offset applied.
-     * Without the offset the overlay is exactly coplanar with the hand model; while the weapon is
-     * static the depth comparison then hides the emissive pass behind the hand model (the blade
-     * looks grey from the base texture), and only during animation does it flicker through. The
-     * offset pushes the overlay in front so the blade is uniformly lit while idle as well.
+     * Self-lit overlay layer handled by Iris shader packs; binds the item atlas explicitly.
+     *
+     * <p>It is the vanilla entity-translucent-emissive render type (NEW_ENTITY format, item atlas) but
+     * with polygon offset applied. Without the offset the overlay is exactly coplanar with the weapon
+     * model, so while the weapon is static the depth comparison hides the emissive pass behind the
+     * model: thin one-handed blades disappear completely and larger blades only flicker through while
+     * moving. The offset pushes the overlay in front so the blade is uniformly lit while idle too.
+     * This is what used to break third-person glow (first person was drawn deferred and worked).</p>
      */
-    private static final RenderType EMISSIVE_LAYER_FIRST_PERSON = RenderType.create(
-            "bettercombat_neonarsenal_blade_glow_emissive_hand",
+    private static final RenderType EMISSIVE_LAYER = RenderType.create(
+            "bettercombat_neonarsenal_blade_glow_emissive",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,
             1536,
@@ -196,7 +192,7 @@ public final class WeaponGlow {
                 FirstPersonGlowPass.capture(context, overlay, poseStack, tint, alpha);
             } else {
                 PoseStack.Pose pose = poseStack.last();
-                drawOverlay(buffers.getBuffer(layerFor(config, context.firstPerson())), pose, overlay,
+                drawOverlay(buffers.getBuffer(layerFor(config)), pose, overlay,
                         tint, alpha);
             }
         }
@@ -251,24 +247,24 @@ public final class WeaponGlow {
      * custom render types, and their deferred passes shade translucent geometry again, which makes an
      * additive overlay come out partially lit. The vanilla {@code entity_translucent_emissive} layer
      * is a render type shader packs already handle (it is explicitly self-lit), so it is used
-     * whenever a shader pack is active. In first person the same emissive layer is used, only with
-     * polygon offset, so it is not hidden behind the hand model while the weapon is static.</p>
+     * whenever a shader pack is active. That emissive layer carries polygon offset in both hand and
+     * world contexts, so the overlay is never hidden behind the weapon model while it is static.</p>
      */
-    private static RenderType layerFor(WeaponGlowConfig config, boolean firstPerson) {
+    private static RenderType layerFor(WeaponGlowConfig config) {
         String mode = config.glow.mode;
         if ("emissive".equals(mode)) {
-            return firstPerson ? EMISSIVE_LAYER_FIRST_PERSON : EMISSIVE_LAYER;
+            return EMISSIVE_LAYER;
         }
         if ("translucent".equals(mode)) {
-            return Sheets.translucentItemSheet();
+            return TINT_LAYER;
         }
         if ("additive".equals(mode)) {
             return ADDITIVE_LAYER;
         }
         if (shaderPackActive()) {
-            return firstPerson ? EMISSIVE_LAYER_FIRST_PERSON : EMISSIVE_LAYER;
+            return EMISSIVE_LAYER;
         }
-        return config.glow.additive ? ADDITIVE_LAYER : Sheets.translucentItemSheet();
+        return config.glow.additive ? ADDITIVE_LAYER : TINT_LAYER;
     }
 
     /**

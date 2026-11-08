@@ -1,0 +1,36 @@
+{
+  "parent": "builtin/entity",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:weapon/dagger"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, -90, 0],
+      "translation": [0, 6.5, 2],
+      "scale": [1.4, 1.4, 1.4]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 90, 0],
+      "translation": [0, 6.5, 2],
+      "scale": [1.4, 1.4, 1.4]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, -90, 20],
+      "translation": [3, 6, 0]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 90, -20],
+      "translation": [3, 6, 0]
+    },
+    "ground": {
+      "rotation": [180, 0, 0],
+      "translation": [0, -2.75, 0],
+      "scale": [1.4, 1.4, 1.4]
+    },
+    "fixed": {
+      "rotation": [0, 0, 45],
+      "translation": [-5, 5.5, 0],
+      "scale": [2, 2, 2]
+    }
+  }
+}

@@ -1,6 +1,7 @@
 package com.zszq.neonarsenal.weapon;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import net.minecraft.resources.ResourceLocation;
@@ -32,7 +33,20 @@ public record WeaponDefinition(
         float attackDamage,
         float attackSpeed,
         ResourceLocation betterCombatPreset,
+        Set<Ability> abilities,
         ItemFactory itemFactory) {
+
+    /** Gameplay skills a weapon can have; everything else falls back to plain attacks. */
+    public enum Ability {
+        /** Long-press falling slash (下落斩击). */
+        FALL_SLASH,
+        /** Elytra glide slash during an elytra flight, triggered by holding the attack key (鞘翅斩击). */
+        ELYTRA_SLASH,
+        /** Right-click blocking with the parry pose. */
+        BLOCK,
+        /** Airborne jump slam (跳劈). */
+        JUMP_ATTACK
+    }
 
     /** Same id constraint Minecraft applies to registry names. */
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9_]+");
@@ -45,6 +59,12 @@ public record WeaponDefinition(
         if (attackDamage < 0.0F) {
             throw new IllegalArgumentException("attackDamage must not be negative, got: " + attackDamage);
         }
+        abilities = Set.copyOf(Objects.requireNonNull(abilities, "abilities"));
+    }
+
+    /** {@return whether this weapon may perform the given skill}. */
+    public boolean can(Ability ability) {
+        return abilities.contains(ability);
     }
 
     /**
@@ -57,7 +77,7 @@ public record WeaponDefinition(
                 .stacksTo(1)
                 .attributes(SwordItem.createAttributes(tier, attackDamage, attackSpeed));
         if (itemFactory == null) {
-            return new com.zszq.neonarsenal.item.SharpnessWeaponItem(tier, properties);
+            return new com.zszq.neonarsenal.item.SharpnessWeaponItem(tier, properties, abilities);
         }
         return itemFactory.create(tier, properties);
     }
@@ -90,6 +110,7 @@ public record WeaponDefinition(
         private float attackDamage = 3.0F;
         private float attackSpeed = -2.4F;
         private ResourceLocation betterCombatPreset;
+        private Set<Ability> abilities = Set.of();
         private ItemFactory itemFactory;
 
         private Builder(String id) {
@@ -128,6 +149,12 @@ public record WeaponDefinition(
             return this;
         }
 
+        /** Skills this weapon may perform; omit for a plain attack-only weapon. */
+        public Builder abilities(Ability... abilities) {
+            this.abilities = Set.of(abilities);
+            return this;
+        }
+
         /** Replaces the default {@link SwordItem} factory. */
         public Builder itemFactory(ItemFactory itemFactory) {
             this.itemFactory = itemFactory;
@@ -135,7 +162,8 @@ public record WeaponDefinition(
         }
 
         public WeaponDefinition build() {
-            return new WeaponDefinition(id, tier, attackDamage, attackSpeed, betterCombatPreset, itemFactory);
+            return new WeaponDefinition(id, tier, attackDamage, attackSpeed, betterCombatPreset,
+                    abilities, itemFactory);
         }
     }
 }

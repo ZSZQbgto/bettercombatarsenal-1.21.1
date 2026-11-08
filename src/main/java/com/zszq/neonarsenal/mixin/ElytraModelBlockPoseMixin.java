@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class ElytraModelBlockPoseMixin {
 
     @Redirect(
-            method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFFF)V",
+            method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;isCrouching()Z"))
     private boolean neonarsenal$useSneakWingPoseWhileBlocking(LivingEntity entity) {
         return entity.isCrouching()

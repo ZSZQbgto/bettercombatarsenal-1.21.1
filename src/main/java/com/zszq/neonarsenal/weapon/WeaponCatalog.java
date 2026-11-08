@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.zszq.neonarsenal.weapon.WeaponDefinition.Ability;
+
 import net.minecraft.world.item.Tiers;
 
 /**
@@ -19,6 +21,9 @@ import net.minecraft.world.item.Tiers;
  *   <li>{@code assets/bettercombat_neonarsenal/lang/*.json} (item name)</li>
  *   <li>recipe and {@code data/minecraft/tags/item/swords.json} entries (if applicable)</li>
  * </ul>
+ *
+ * <p>Weapon skills are declared per entry: falling slash, blocking and jump attack. Weapons without
+ * an ability simply keep plain attacks for that input.</p>
  */
 public final class WeaponCatalog {
 
@@ -28,42 +33,55 @@ public final class WeaponCatalog {
                     .attackDamage(3.3F)
                     .attackSpeed(-2.4F)
                     .betterCombatPreset(NeonArsenalPresets.SWORD)
+                    .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("claymore")
                     .tier(Tiers.IRON)
                     .attackDamage(12.0F)
                     .attackSpeed(-3.2F)
                     .betterCombatPreset(NeonArsenalPresets.CLAYMORE)
+                    .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("doubleaxe")
                     .tier(Tiers.IRON)
                     .attackDamage(17.0F)
                     .attackSpeed(-3.4F)
                     .betterCombatPreset(NeonArsenalPresets.DOUBLE_AXE)
+                    .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("twinblade")
                     .tier(Tiers.IRON)
                     .attackDamage(6.2F)
                     .attackSpeed(-2.6F)
                     .betterCombatPreset(NeonArsenalPresets.TWIN_BLADE)
+                    .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("hengdao")
                     .tier(Tiers.IRON)
                     .attackDamage(8.0F)
                     .attackSpeed(-2.9F)
                     .betterCombatPreset(NeonArsenalPresets.KATANA)
+                    .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("rapier")
                     .tier(Tiers.IRON)
                     .attackDamage(2.0F)
                     .attackSpeed(-1.8F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
+                    .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
+                    .build(),
+            WeaponDefinition.builder("dagger")
+                    .tier(Tiers.IRON)
+                    .attackDamage(1.0F)
+                    .attackSpeed(-0.8F)
+                    .betterCombatPreset(NeonArsenalPresets.DAGGER)
                     .build(),
             WeaponDefinition.builder("spear")
                     .tier(Tiers.IRON)
                     .attackDamage(6.2F)
                     .attackSpeed(-2.8F)
                     .betterCombatPreset(NeonArsenalPresets.SPEAR)
+                    .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build());
 
     private static final Map<String, WeaponDefinition> BY_ID;

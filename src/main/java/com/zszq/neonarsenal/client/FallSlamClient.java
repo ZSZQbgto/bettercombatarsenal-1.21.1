@@ -7,6 +7,7 @@ import com.zszq.neonarsenal.compat.FallSlamStrikePayload;
 import com.zszq.neonarsenal.compat.FallSlamWindupPayload;
 import com.zszq.neonarsenal.compat.JumpAttackHandler;
 import com.zszq.neonarsenal.mixin.MinecraftAttackAccessor;
+import com.zszq.neonarsenal.weapon.WeaponDefinition.Ability;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -48,9 +49,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * restored afterwards. A short tap instead performs one normal attack on release.</p>
  *
  * <p><b>Elytra glide.</b> Deploying an elytra during the windup keeps the frozen pose, but the slash
- * then only triggers when the gliding player hits a creature (no ground/landing trigger). Right-click
- * during an elytra flight with an arsenal weapon starts the same glide windup directly, so the same
- * collision strike applies.</p>
+ * then only triggers when the gliding player hits a creature (no ground/landing trigger). Holding the
+ * attack key (0.15 s) during an elytra flight with an elytra-slash weapon starts the same glide windup
+ * directly, so the same collision strike applies; right-click has no effect while gliding.</p>
  */
 public final class FallSlamClient {
 
@@ -80,7 +81,6 @@ public final class FallSlamClient {
     private static FallSlamWindSound windSound;
 
     private static boolean wasAttackDown;
-    private static boolean wasUseDown;
     private static boolean glidingSlash;
     private static int keyDownTicks;
     private static int lockTicks;
@@ -116,29 +116,61 @@ public final class FallSlamClient {
             resetLocal();
         }
 
-        boolean useDown = minecraft.options.keyUse.isDown();
-        boolean usePressed = useDown && !wasUseDown;
-        wasUseDown = useDown;
-
         if (phase == Phase.COMMITTED || phase == Phase.LOCK) {
             holdFilters();
             return;
         }
         if (player.isFallFlying()) {
-            // Elytra gliding: the normal free-fall trigger never runs. Right-click (while holding an
-            // arsenal weapon) starts the same windup; a windup that was already running keeps its
-            // frozen pose. The slash itself only triggers on a creature collision (see tickWindup).
-            wasAttackDown = false;
-            if (phase == Phase.IDLE) {
-                if (usePressed && JumpAttackHandler.isHoldingArsenalWeapon(player)) {
-                    startGlideWindup(player, minecraft);
+            // Elytra gliding: the free-fall trigger never runs. Holding the attack key (0.15 s)
+            // starts the same elytra-slash windup; right-click has no effect. A windup that was
+            // already running keeps its frozen pose and only strikes on a creature collision (see
+            // tickWindup). Weapons without the elytra-slash skill keep their normal ground-style
+            // attacks while gliding (jump slam is disabled during a glide in JumpAttackHandler).
+            boolean armed = JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.ELYTRA_SLASH);
+            if (!armed) {
+                if (phase != Phase.IDLE) {
+                    FallSlamAnimation.stop(player, ABORT_FADE_TICKS);
+                    clearSlam();
                 }
-            } else if (phase == Phase.PENDING) {
-                // The elytra replaced the free fall before the long press completed.
-                clearSlam();
-            } else {
-                holdFilters();
+                return;
             }
+            boolean attackDown = minecraft.options.keyAttack.isDown();
+            boolean attackPressed = attackDown && !wasAttackDown;
+            if (attackPressed) {
+                wasAttackDown = true;
+                keyDownTicks = 0;
+            } else if (!attackDown) {
+                wasAttackDown = false;
+            }
+            if (attackDown) {
+                keyDownTicks++;
+            }
+            if (phase == Phase.IDLE) {
+                if (attackPressed) {
+                    phase = Phase.PENDING;
+                    commitTicks = 0;
+                    slamReported = false;
+                    glidingSlash = true;
+                    // Drop any Better Combat swing that was started before the press.
+                    FallSlamAnimation.clearBetterCombatSwing();
+                }
+                return;
+            }
+            if (phase == Phase.PENDING) {
+                if (attackDown) {
+                    FallSlamState.attackLock = false;
+                    holdFilters();
+                    if (keyDownTicks >= LONG_PRESS_TICKS) {
+                        startGlideWindup(player);
+                    }
+                    return;
+                }
+                // Released before the long press: one normal attack, like the falling-slash short tap.
+                shortTapAttack(minecraft, player);
+                return;
+            }
+            // WINDUP: hold the frozen 1/3 pose until a creature is hit.
+            holdFilters();
             return;
         }
         if (player.hasEffect(MobEffects.SLOW_FALLING)) {
@@ -165,7 +197,7 @@ public final class FallSlamClient {
         keyDownTicks++;
 
         if (player.onGround() || player.getAbilities().flying
-                || !JumpAttackHandler.isHoldingArsenalWeapon(player)) {
+                || !JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.FALL_SLASH)) {
             return;
         }
         if (Double.isNaN(fallStartY)) {
@@ -243,8 +275,8 @@ public final class FallSlamClient {
         setServerWindup(true);
     }
 
-    /** Starts the same frozen windup from an elytra flight right-click; the strike waits for impact. */
-    private static void startGlideWindup(LocalPlayer player, Minecraft minecraft) {
+    /** Starts the same frozen windup from an elytra glide attack hold; the strike waits for impact. */
+    private static void startGlideWindup(LocalPlayer player) {
         phase = Phase.WINDUP;
         commitTicks = 0;
         slamReported = false;
@@ -257,14 +289,18 @@ public final class FallSlamClient {
         FallSlamAnimation.clearBetterCombatSwing();
         FallSlamAnimation.onExternalStart(player);
         setServerWindup(true);
-        // This right-click belongs to the glide slash, not to item use / blocking.
-        minecraft.options.keyUse.consumeClick();
     }
 
     private static void tickPending(LocalPlayer player, Minecraft minecraft) {
+        if (glidingSlash) {
+            // Elytra-slash pending is advanced by preTick every tick; just keep the filters in place.
+            FallSlamState.attackLock = false;
+            holdFilters();
+            return;
+        }
         boolean attackDown = minecraft.options.keyAttack.isDown();
         boolean airborne = !player.onGround() && !player.getAbilities().flying;
-        boolean armed = JumpAttackHandler.isHoldingArsenalWeapon(player);
+        boolean armed = JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.FALL_SLASH);
         if (attackDown && airborne && armed) {
             // Still waiting for the 0.15 s long-press decision; preTick advances it.
             FallSlamState.attackLock = false;
@@ -285,7 +321,13 @@ public final class FallSlamClient {
 
         if (player.isFallFlying()) {
             // Gliding windup: keep the frozen 1/3 pose and wait for a creature collision instead of
-            // the normal four-block / landing trigger.
+            // the normal four-block / landing trigger. Only weapons with the elytra-slash skill may
+            // keep or start this windup.
+            if (!JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.ELYTRA_SLASH)) {
+                FallSlamAnimation.stop(player, ABORT_FADE_TICKS);
+                clearSlam();
+                return;
+            }
             glidingSlash = true;
             FallSlamAnimation.tickPause(player);
             LivingEntity target = findGlideTarget(player);
@@ -400,7 +442,9 @@ public final class FallSlamClient {
         stopWind();
         afterRelease = true;
         fallStartY = Double.NaN;
-        wasAttackDown = false;
+        // Keep the key edge in sync: if attack is still held after the lock, it must not count as a
+        // new press (otherwise the elytra slash would chain-strike while the key stays down).
+        wasAttackDown = attackKeyDown();
         keyDownTicks = 0;
     }
 
@@ -430,6 +474,11 @@ public final class FallSlamClient {
         clearSlam();
     }
 
+    /** {@return whether the local attack key is currently held}. */
+    private static boolean attackKeyDown() {
+        return Minecraft.getInstance().options.keyAttack.isDown();
+    }
+
     /** Ends any active falling-slash state and restores Better Combat's attack channel. */
     private static void clearSlam() {
         resetState();
@@ -438,7 +487,7 @@ public final class FallSlamClient {
         stopWind();
         afterRelease = true;
         fallStartY = Double.NaN;
-        wasAttackDown = false;
+        wasAttackDown = attackKeyDown();
         keyDownTicks = 0;
     }
 
@@ -452,7 +501,6 @@ public final class FallSlamClient {
         afterRelease = true;
         fallStartY = Double.NaN;
         wasAttackDown = false;
-        wasUseDown = false;
         keyDownTicks = 0;
     }
 

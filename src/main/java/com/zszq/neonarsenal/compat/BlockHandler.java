@@ -48,7 +48,8 @@ public final class BlockHandler {
         return player != null
                 && !player.isFallFlying()
                 && player.isUsingItem()
-                && player.getUseItem().getItem() instanceof SharpnessWeaponItem;
+                && player.getUseItem().getItem() instanceof SharpnessWeaponItem weapon
+                && weapon.canBlock();
     }
 
     /** Successful block: cancel the hit and spend one sharpness point. */
@@ -170,10 +171,11 @@ public final class BlockHandler {
         if (event.getHand() != InteractionHand.MAIN_HAND) {
             return;
         }
-        if (!(event.getEntity().getMainHandItem().getItem() instanceof SharpnessWeaponItem)) {
+        if (!(event.getEntity().getMainHandItem().getItem() instanceof SharpnessWeaponItem weapon)
+                || !weapon.canBlock()) {
             return;
         }
-        // During an elytra glide right-click is the falling slash, so no block interaction/blocking.
+        // During an elytra glide right-click has no special effect, so no block interaction/blocking.
         if (event.getEntity().isFallFlying()) {
             event.setCanceled(true);
             return;

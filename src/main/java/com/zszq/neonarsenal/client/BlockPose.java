@@ -79,7 +79,8 @@ public final class BlockPose {
         return player != null
                 && !player.isFallFlying()
                 && player.isUsingItem()
-                && player.getUseItem().getItem() instanceof SharpnessWeaponItem;
+                && player.getUseItem().getItem() instanceof SharpnessWeaponItem weapon
+                && weapon.canBlock();
     }
 
     /** Applies the blocking pose to the upper body; legs are never touched. */

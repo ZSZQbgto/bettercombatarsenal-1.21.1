@@ -2,7 +2,7 @@
 
 [中文](#更好的战斗霓虹装备) | [English](#english)
 
-> 极光工业新一代作战套件：7 把武器、会变钝的刀口、4 种锻刃材料、2 个效果开关、任意染料染色。
+> 极光工业新一代作战套件：8 把武器、会变钝的刀口、4 种锻刃材料、2 个效果开关、任意染料染色。
 > 核心工艺由同一套工业铁砧完成，抹除交给砂轮。
 >
 > **背景**：极光工业（Aurora Industries）推出的新一代作战武器套件。
@@ -76,7 +76,8 @@
 - 松开攻击键（尚未到 4 格）会在 0.2 秒内淡回下落姿态，并重置已累计的下落高度，需要重新按住再下落超过 5 格才会再次触发。
 - 下落斩击：下落 **<10 格免疫摔落伤害**；**>10 格每多 3 格扣 1 点血量**，最低保留 **1 点血**，不会摔死；普通下落不受影响。
 - **装备鞘翅时**：下落斩击蓄力过程中单击空格展开滑翔会**保持当前蓄力姿势**；此后不再按“距地 4 格/落地”触发，而是**撞击生物时触发斩击**。滑翔结束时若没有撞到生物，斩击不会触发，蓄力自动收回。
-- **鞘翅滑翔中**（手持本模组武器）**右键**可直接进入同样的滑行斩击蓄力（1/3 定格），撞到生物时触发斩击；滑翔斩击的额外攻击力按**撞击瞬间的速度**计算：把速度换算成等效下落高度（`v = √(2·0.08·h)`）后套用同一分档，与下落斩击保持平衡。
+- **鞘翅滑翔中**（手持可鞘翅斩击的武器）**长按左键 0.15 秒**进入同样的滑行斩击蓄力（1/3 定格），撞到生物时触发斩击；**滑翔中长按/点击右键没有效果**。滑翔斩击的额外攻击力按**撞击瞬间的速度**计算：把速度换算成等效下落高度（`v = √(2·0.08·h)`）后套用同一分档，与下落斩击保持平衡。
+- **鞘翅斩击是独立分配的技能**：仅**阔剑、双刃斧、横刀、双刃剑**可用（与下落斩击相同）；其他武器在滑翔和下落时保持**平地的攻击方式**，不会进入蓄力。
 
 ### 7. 格挡
 
@@ -96,15 +97,16 @@
 
 ## 武器
 
-| 武器 | ID | 攻速 | 伤害 | DPS | 定位 |
-|---|---|---|---|---|---|
-| 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | 单手，最稳 |
-| 阔剑 | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | 双手，+0.35 距离 |
-| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | 双手连段 |
-| 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | 双手旋转斩 |
-| 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | 双手拔刀斩 |
-| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | 单手快刺 |
-| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | 双手，+1 距离 |
+| 武器 | ID | 攻速 | 伤害 | DPS | 跳劈 | 格挡 | 下落斩击 | 鞘翅斩击 | 定位 |
+|---|---|---|---|---|---|---|---|---|---|
+| 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | ✓ | ✓ | — | — | 单手，最稳 |
+| 阔剑 | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | ✓ | ✓ | ✓ | ✓ | 双手，+0.35 距离 |
+| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | ✓ | ✓ | ✓ | ✓ | 双手连段 |
+| 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | ✓ | ✓ | ✓ | ✓ | 双手旋转斩 |
+| 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | ✓ | ✓ | ✓ | ✓ | 双手拔刀斩 |
+| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | ✓ | ✓ | — | — | 单手快刺 |
+| 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | 单手短刃，纯输出 |
+| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | 双手，+1 距离 |
 
 ## 工艺速查
 
@@ -113,7 +115,7 @@
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
 - **Tooltip**：平时显示刀刃锐度、颜色（染色显示为着色模块，仅锻刃层时显示锻刃颜色）、锻刃效果；按住 Shift 看综合性能与每层说明。
 - **配置**：模组列表滑条——粒子密度 0–3、刀刃发光强度 0–1。
-- **JEI**：154 条锻刃配方，铁砧为催化剂。
+- **JEI**：176 条锻刃配方，铁砧为催化剂。
 - **多人**：锻刃、冷却与粒子效果在多人联机下保持一致。
 
 ## 许可
@@ -129,7 +131,7 @@
 
 [中文](#更好的战斗霓虹装备) | [English](#english)
 
-> Aurora Industries' new-generation combat kit: seven weapons, edges that wear down, four forge materials, two effect
+> Aurora Industries' new-generation combat kit: eight weapons, edges that wear down, four forge materials, two effect
 > switches and unlimited dyeing. Core processes run through one industrial anvil; wipes happen at the grindstone.
 
 ## Requirements
@@ -201,7 +203,8 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - Releasing attack before the 4-block trigger fades back over 0.2 s and resets the measured fall height, so a new press must accumulate more than 5 blocks again.
 - Falling slash: **<10 blocks is fall-damage immune**; above 10 blocks lose **1 HP per extra 3 blocks**, clamped to **1 HP** so it cannot kill. Normal falls are unaffected.
 - **With an elytra**: deploying glide during the windup keeps the frozen pose; the slash then no longer triggers by ground distance/landing but **only when hitting a creature**. If the glide ends without hitting anything, no strike is made and the windup is retracted.
-- **While elytra gliding** (holding an arsenal weapon), **right-click** starts the same glide windup (frozen at 1/3); hitting a creature triggers the slash. Its extra attack power follows the **impact speed**: the speed is converted to the equivalent free-fall height (`v = √(2·0.08·h)`) and the same height tiers are applied, keeping it balanced with the normal falling slash.
+- **While elytra gliding** (holding a weapon with the elytra-slash skill), **hold left-click for 0.15 s** to enter the same glide windup (frozen at 1/3); hitting a creature triggers the slash. **Right-click does nothing while gliding.** Its extra attack power follows the **impact speed**: the speed is converted to the equivalent free-fall height (`v = √(2·0.08·h)`) and the same height tiers are applied, keeping it balanced with the normal falling slash.
+- **Elytra slash is a separately assigned skill**: only the **Broadsword, Double-Bladed Axe, Hengdao and Double-Edged Sword** can use it (same list as the falling slash); all other weapons keep their **normal ground-style attacks** while gliding and falling and never enter the windup.
 
 ### 7. Blocking
 
@@ -221,15 +224,16 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 
 ## Weapons
 
-| Weapon | ID | Speed | Damage | DPS | Role |
-|---|---|---|---|---|---|
-| Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | One-handed, steady |
-| Broadsword | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | Two-handed, +0.35 reach |
-| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | Two-handed combo |
-| Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | Two-handed spin |
-| Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | Two-handed draw slashes |
-| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | One-handed fast thrusts |
-| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | Two-handed, +1 reach |
+| Weapon | ID | Speed | Damage | DPS | Jump slam | Block | Falling slash | Elytra slash | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | ✓ | ✓ | — | — | One-handed, steady |
+| Broadsword | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | ✓ | ✓ | ✓ | ✓ | Two-handed, +0.35 reach |
+| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | ✓ | ✓ | ✓ | ✓ | Two-handed combo |
+| Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | ✓ | ✓ | ✓ | ✓ | Two-handed spin |
+| Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | ✓ | ✓ | ✓ | ✓ | Two-handed draw slashes |
+| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | ✓ | ✓ | — | — | One-handed fast thrusts |
+| Dagger | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | One-handed short blade, pure damage |
+| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | Two-handed, +1 reach |
 
 ## Quick reference
 
@@ -238,7 +242,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.
 - **Tooltip**: shows blade sharpness, colour (colour module when dyed, forge colour when only layers are present) and forge effects; hold Shift for totals and per-layer text.
 - **Config**: mod-list sliders — particle density 0–3, blade glow intensity 0–1.
-- **JEI**: 154 forging recipes with the anvil as catalyst.
+- **JEI**: 176 forging recipes with the anvil as catalyst.
 - **Multiplayer**: forging, cooldowns and particle effects stay consistent in multiplayer.
 
 ## License

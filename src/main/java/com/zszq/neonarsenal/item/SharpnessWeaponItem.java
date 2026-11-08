@@ -2,6 +2,9 @@ package com.zszq.neonarsenal.item;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Set;
+
+import com.zszq.neonarsenal.weapon.WeaponDefinition.Ability;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -31,10 +34,26 @@ public class SharpnessWeaponItem extends Item {
     private static boolean shiftLookupTried;
 
     private final Tier tier;
+    private final Set<Ability> abilities;
 
     public SharpnessWeaponItem(Tier tier, Item.Properties properties) {
+        this(tier, properties, Set.of());
+    }
+
+    public SharpnessWeaponItem(Tier tier, Item.Properties properties, Set<Ability> abilities) {
         super(properties);
         this.tier = tier;
+        this.abilities = Set.copyOf(abilities);
+    }
+
+    /** {@return whether this weapon may perform the given skill}. */
+    public boolean hasAbility(Ability ability) {
+        return this.abilities.contains(ability);
+    }
+
+    /** {@return true when this weapon may be used for right-click blocking}. */
+    public boolean canBlock() {
+        return hasAbility(Ability.BLOCK);
     }
 
     @Override
@@ -44,8 +63,13 @@ public class SharpnessWeaponItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand usedHand) {
+        // Weapons without the blocking ability keep plain item behaviour.
+        if (!canBlock()) {
+            return super.use(level, player, usedHand);
+        }
         if (usedHand == InteractionHand.MAIN_HAND) {
-            // While gliding, right-click belongs to the falling slash (glide windup), not to blocking.
+            // While gliding, right-click has no effect (the elytra slash is a left-click hold), so the
+            // use does not start blocking.
             if (player.isFallFlying()) {
                 return InteractionResultHolder.fail(player.getItemInHand(usedHand));
             }

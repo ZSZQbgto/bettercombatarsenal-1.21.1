@@ -36,6 +36,9 @@ public final class NeonArsenalPresets {
     /** One-handed rapier preset: quick horizontal slash + forward stab, category {@code rapier}. */
     public static final ResourceLocation RAPIER = of("rapier");
 
+    /** One-handed dagger preset: short quick slashes/stabs, category {@code dagger}. */
+    public static final ResourceLocation DAGGER = of("dagger");
+
     /** Two-handed spear preset: long forward stab, +1 reach, category {@code spear}. */
     public static final ResourceLocation SPEAR = of("spear");
 

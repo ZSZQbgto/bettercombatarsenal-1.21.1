@@ -1,0 +1,8 @@
+{
+  "loader": "bettercombat_neonarsenal:permissive_model",
+  "source": "bettercombat_neonarsenal:geometry/dagger",
+  "textures": {
+    "0": "bettercombat_neonarsenal:weapon/dagger",
+    "particle": "bettercombat_neonarsenal:weapon/dagger"
+  }
+}

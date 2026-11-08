@@ -90,10 +90,20 @@ public final class JumpAttackHandler {
             // Creative flight attacks use the normal ground attack, not the jump slam.
             return null;
         }
+        if (player.isFallFlying()) {
+            // Elytra gliding keeps the normal ground-style attack. The elytra slash (long attack
+            // press) is driven by FallSlamClient; a jump slam must never fire while gliding.
+            return null;
+        }
         // Vanilla-style airborne attack conditions: any time between jumping and landing counts,
         // including while falling. Climbing, swimming, riding and blindness are excluded just like
         // vanilla critical hits.
         if (!isJumpAttackAirborne(player)) {
+            return null;
+        }
+        if (player.fallDistance > 5.0F) {
+            // A sustained fall belongs to the falling slash (for its weapons) or to plain ground-style
+            // attacks (for every other weapon); it must not become a jump slam.
             return null;
         }
         if (player.onClimbable() || player.isInWater() || player.isPassenger()
@@ -130,6 +140,10 @@ public final class JumpAttackHandler {
                 target = offhand;
                 weaponId = offhandId;
                 offHand = true;
+            }
+            // Weapons without the jump-attack skill keep Better Combat's normal airborne attack.
+            if (!canWeapon(weaponId, com.zszq.neonarsenal.weapon.WeaponDefinition.Ability.JUMP_ATTACK)) {
+                return null;
             }
             Object attributes = getAttributes.invoke(null, target);
             if (attributes == null) {
@@ -191,6 +205,26 @@ public final class JumpAttackHandler {
     public static boolean isHoldingArsenalWeapon(Player player) {
         return player != null
                 && (arsenalId(player.getMainHandItem()) != null || arsenalId(player.getOffhandItem()) != null);
+    }
+
+    /** {@return whether the catalog weapon with this id may perform the given skill}. */
+    private static boolean canWeapon(String weaponId,
+                                     com.zszq.neonarsenal.weapon.WeaponDefinition.Ability ability) {
+        return weaponId != null && WeaponCatalog.find(weaponId)
+                .map(definition -> definition.can(ability))
+                .orElse(false);
+    }
+
+    /** {@return whether the stack is one of our weapons with the given skill}. */
+    public static boolean hasAbility(ItemStack stack,
+                                     com.zszq.neonarsenal.weapon.WeaponDefinition.Ability ability) {
+        return canWeapon(arsenalId(stack), ability);
+    }
+
+    /** {@return whether the player's main-hand weapon has the given skill}. */
+    public static boolean isHoldingAbilityWeapon(Player player,
+                                                 com.zszq.neonarsenal.weapon.WeaponDefinition.Ability ability) {
+        return player != null && hasAbility(player.getMainHandItem(), ability);
     }
 
     /** {@return whether jumping is currently blocked by the jump-attack cooldown (first half)}. */
