@@ -12,6 +12,7 @@ import com.zszq.neonarsenal.registry.ModSounds;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -59,8 +60,14 @@ public final class BlockHandler {
         if (event.isCanceled() || event.getAmount() <= 0.0F) {
             return;
         }
+        // 210 degree frontal arc: attacks from behind/sides are not blocked.
+        if (!isInBlockingArc(player, event)) {
+            return;
+        }
         ItemStack weapon = player.getUseItem();
-        Sharpness.consume(weapon);
+        // One block costs ceil(10% of the incoming damage) sharpness.
+        int loss = (int) Math.ceil(event.getAmount() * 0.10D);
+        Sharpness.set(weapon, Math.max(0, Sharpness.get(weapon) - loss));
         // Cancelling the damage would otherwise skip the hurt cooldown, letting the same attacker
         // hit again on every tick and re-trigger the parry sound continuously. Grant the normal
         // short invulnerability window so one hit produces exactly one parry sound.
@@ -90,6 +97,26 @@ public final class BlockHandler {
             player.hurtMarked = true;
         }
         event.setCanceled(true);
+    }
+
+    /** {@return true when the damage source lies within the 210-degree frontal blocking arc}. */
+    private static boolean isInBlockingArc(ServerPlayer player, LivingIncomingDamageEvent event) {
+        Entity source = event.getSource().getDirectEntity();
+        if (source == null) {
+            source = event.getSource().getEntity();
+        }
+        if (source == null) {
+            // Environmental damage has no direction and is not blocked by the frontal guard.
+            return false;
+        }
+        Vec3 toSource = new Vec3(source.getX() - player.getX(), 0.0D, source.getZ() - player.getZ());
+        Vec3 look = new Vec3(player.getLookAngle().x, 0.0D, player.getLookAngle().z);
+        if (toSource.lengthSqr() < 1.0E-6D || look.lengthSqr() < 1.0E-6D) {
+            return true;
+        }
+        double dot = toSource.normalize().dot(look.normalize());
+        double angle = Math.toDegrees(Math.acos(Math.max(-1.0D, Math.min(1.0D, dot))));
+        return angle <= 105.0D;
     }
 
     /** Blocking is the highest-priority action: attacks are cancelled while blocking. */
@@ -129,6 +156,10 @@ public final class BlockHandler {
         if (blocking) {
             if (player.isSprinting()) {
                 player.setSprinting(false);
+            }
+            // Sneaking is suppressed while blocking.
+            if (player.isShiftKeyDown()) {
+                player.setShiftKeyDown(false);
             }
             if (start == null) {
                 BLOCK_START.put(id, player.level().getGameTime());

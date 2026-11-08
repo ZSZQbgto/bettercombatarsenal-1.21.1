@@ -67,6 +67,9 @@ public final class NeonArsenalClient {
             // Blocked hits should not flash the player red.
             Minecraft.getInstance().player.hurtTime = 0;
             Minecraft.getInstance().player.hurtDuration = 0;
+            if (Minecraft.getInstance().player.isShiftKeyDown()) {
+                Minecraft.getInstance().player.setShiftKeyDown(false);
+            }
             if (Minecraft.getInstance().player.isSprinting()) {
                 Minecraft.getInstance().player.setSprinting(false);
             }
@@ -125,4 +128,5 @@ public final class NeonArsenalClient {
     private static ResourceLocation model(String path) {
         return ResourceLocation.fromNamespaceAndPath(NeonArsenal.MODID, path);
     }
+
 }

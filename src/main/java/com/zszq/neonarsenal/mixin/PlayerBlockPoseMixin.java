@@ -26,6 +26,8 @@ public abstract class PlayerBlockPoseMixin {
             float progress = BlockPose.progress(player, Minecraft.getInstance().getFrameTimeNs() / 1_000_000_000.0F);
             if (progress > 0.0F) {
                 BlockPose.apply((PlayerModel<?>) (Object) this, player, progress);
+            } else {
+                BlockPose.clearRenderBends((PlayerModel<?>) (Object) this);
             }
         } catch (Throwable ignored) {
             // Never break player rendering because of a missing/broken animation asset.

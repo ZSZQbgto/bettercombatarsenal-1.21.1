@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -41,6 +42,7 @@ public final class BlockPose {
             "claymore", "twinblade", "doubleaxe", "hengdao", "spear");
 
     private static final Map<UUID, Float> PROGRESS = new HashMap<>();
+    private static final Map<PlayerModel<?>, float[]> RENDER_BENDS = new WeakHashMap<>();
     private static Map<String, Bone> twoHanded;
     private static Map<String, Bone> dualWield;
     private static boolean loadTried;
@@ -91,23 +93,43 @@ public final class BlockPose {
         setBone(model.rightArm, bones.get("right_arm"), -5.0F, armBaseY, 0.0F, progress);
         setBone(model.leftArm, bones.get("left_arm"), 5.0F, armBaseY, 0.0F, progress);
 
-        // The attach correction must move the whole upper body, not only the torso; otherwise the
-        // head and arms would stay at their old positions and detach from the shifted body.
         attachTorsoToLegs(model.body, progress);
-        // The head and arms are children of the torso: apply the torso's full transform (rotation
-        // plus final translation) to their local pivots instead of merely shifting them.
         Quaternionf bodyRotation = new Quaternionf()
                 .rotateZ(model.body.zRot).rotateY(model.body.yRot).rotateX(model.body.xRot);
-        attachHead(model.head, model.body, bodyRotation, progress);
-        followBody(model.rightArm, -5.0F, armBaseY, true, bones.get("right_arm"),
+        attachHead(model.head, model.body, progress);
+        followBody(model.rightArm, -5.0F, armBaseY, bones.get("right_arm"),
                 model.body, bodyRotation, progress);
-        followBody(model.leftArm, 5.0F, armBaseY, true, bones.get("left_arm"),
+        followBody(model.leftArm, 5.0F, armBaseY, bones.get("left_arm"),
                 model.body, bodyRotation, progress);
 
-        // Keep the outer skin layers in sync with the changed upper body; pants/legs stay vanilla.
         model.leftSleeve.copyFrom(model.leftArm);
         model.rightSleeve.copyFrom(model.rightArm);
         model.jacket.copyFrom(model.body);
+        RENDER_BENDS.put(model, new float[]{bendAngle(bones.get("right_arm_bend"), progress),
+                bendAngle(bones.get("left_arm_bend"), progress), progress});
+    }
+
+    private static float bendAngle(Bone bendBone, float progress) {
+        if (bendBone == null || bendBone.rotation() == null) {
+            return 0.0F;
+        }
+        // Positive authored X angle (the previous attempt used the negated angle and bent backwards).
+        return (float) Math.toRadians(bendBone.rotation()[0]) * progress;
+    }
+
+    public static void clearRenderBends(PlayerModel<?> model) {
+        RENDER_BENDS.remove(model);
+    }
+
+    public static void applyRenderBends(PlayerModel<?> model) {
+        float[] bend = RENDER_BENDS.get(model);
+        if (bend == null || bend[2] <= 0.0F) {
+            return;
+        }
+        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.rightArm, bend[0], bend[2]);
+        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftArm, bend[1], bend[2]);
+        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.rightSleeve, bend[0], bend[2]);
+        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftSleeve, bend[1], bend[2]);
     }
 
     private static void setBone(ModelPart part, Bone bone, float baseX, float baseY, float baseZ,
@@ -151,12 +173,11 @@ public final class BlockPose {
      * Keeps the head pivot on the torso's top pivot, lowered slightly so the head visibly touches
      * the body instead of floating above it.
      */
-    private static void attachHead(ModelPart head, ModelPart body, Quaternionf bodyRotation,
-                                   float progress) {
+    private static void attachHead(ModelPart head, ModelPart body, float progress) {
         if (head == null || body == null) {
             return;
         }
-        Vector3f target = new Vector3f(0.0F, 0.0F, 0.0F).rotate(bodyRotation);
+        Vector3f target = new Vector3f(0.0F, 0.0F, 0.0F);
         target.add(body.x, body.y, body.z);
         target.y += 0.5F;
         head.x = lerp(head.x, target.x, progress);
@@ -165,10 +186,10 @@ public final class BlockPose {
     }
 
     /**
-     * Places a head/arm pivot at {@code bodyTranslation + bodyRotation * localPivot}, so it keeps its
+     * Places an arm pivot at {@code bodyTranslation + bodyRotation * localPivot}, so it keeps its
      * authored offset relative to the torso while the torso rotates and attaches to the legs.
      */
-    private static void followBody(ModelPart part, float baseX, float baseY, boolean arm, Bone bone,
+    private static void followBody(ModelPart part, float baseX, float baseY, Bone bone,
                                    ModelPart body, Quaternionf bodyRotation, float progress) {
         if (part == null || body == null) {
             return;

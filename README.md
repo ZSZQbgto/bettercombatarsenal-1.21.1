@@ -69,8 +69,9 @@
 
 - 手持武器长按右键进入格挡（右键方块同样进入格挡，不触发方块交互）；松开恢复，进入/退出各有 **0.1 秒**过渡。
 - 单持武器与双手武器使用**双手格挡**姿态；真正双持（副手也持本模组武器）使用**双持格挡**姿态（均来自资源包中的一帧动作）。
-- 躯干/身体/头部/手部：**只依靠提供的动作文件**（不叠加其它玩家动画）；躯干旋转后重新贴合腰部（模型 y=12），头部吸附到躯干顶部并略微下移贴住身体，手臂按躯干完整变换定位；身体底部与腿部对齐，不出现间隙。
+- 躯干/身体/头部/手部：**只依靠提供的动作文件**（不叠加其它玩家动画）；手臂使用动作文件中的 `right_arm` / `left_arm` 旋转；格挡时通过渲染前 overlay 把 `right_arm_bend` / `left_arm_bend` 的 **+X** 关节角以最高权重叠加到当前手臂 bend 上（修正之前角度反向）；非格挡不写 bend，不影响 BC / FancyPlayerAnimation；不再强制潜行腿/相机姿态；躯干旋转后重新贴合腰部（模型 y=12），头部吸附到躯干顶部并略微下移贴住身体，手臂按躯干完整变换定位；腿部保持原版渲染，身体底部与腿部对齐，不出现间隙。
 - 腿部：完全不参与格挡动作，保持原版正常渲染。
+- **格挡时屏蔽潜行**：格挡期间强制退出潜行（含清空本地输入 `shiftKeyDown`），右键格挡时不会进入潜行状态；松开后恢复普通潜行输入。
 - **格挡期间不能疾跑**；若开始格挡时正在疾跑，会立即中断疾跑。
 - **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
 - 格挡成功时**不显示受击红闪**。
@@ -79,7 +80,7 @@
 - 每次**触发格挡音效/粒子**时：手部与武器颤动约 2px、持续约 0.1 秒；视角轻微颤动；角色向后平移约 1/4 格。
 - 宽窄皮肤适配：读取玩家 `PlayerSkin.Model`，slim 皮肤的手臂枢轴比 wide 高 0.5 模型单位，格挡姿态会补偿该偏移；手中武器位置沿用原版 slim 偏移。
 - 皮肤外层同步：袖子与外套在姿态计算后重新同步，避免外层皮肤贴图停在 idle 姿态；裤腿保持原版腿部姿态。
-- 格挡判定沿用原版受击路径：格挡期间**免疫所有伤害**；每次本会生效的伤害触发一次成功格挡，消耗 **1 点锋利度**并播放一次格挡音效。**格挡结束（松开右键）后获得 0.2 秒（4 tick）无敌**。
+- 格挡判定沿用原版受击路径，但只对**前方 210°（左右各 105°）**内来源的伤害生效；背后/侧面来源与环境伤害不受格挡。每次成功格挡消耗 **本次伤害 ×10% 向上取整**的锋利度，并播放一次格挡音效；格挡期间**免疫被格挡的伤害**，**松开右键后获得 0.2 秒（4 tick）无敌**。
 - 格挡 **2 秒内**松开不打断连招；超过 2 秒再松开则打断连招。
 
 ## 武器
@@ -109,7 +110,7 @@
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-alpha1.jar
-# 235,729 B · SHA256 B8F90E26…BBCF
+# 239,880 B · SHA256 8E6EA545…3055
 ```
 
 ## 许可
@@ -190,8 +191,9 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 
 - Hold right-click with a weapon to block (right-clicking a block also blocks instead of interacting); release to recover, with a **0.1 s** transition in and out.
 - Single-wield and two-handed weapons use the **two-handed parry**; genuinely dual-wielded pairs (offhand also holds an arsenal weapon) use the **dual-wield parry** (both supplied one-frame animations).
-- Torso/body/head/hands: driven **only by the supplied animation file** (no other player animation is stacked). After posing, the torso is re-attached to the waist (model y=12); the head snaps to the torso top and is lowered slightly to touch the body, while arms follow the torso's full transform. The torso bottom lines up with the legs and no gap appears.
+- Torso/body/head/hands: driven **only by the supplied animation file** (no other player animation is stacked). Arms use the animation file's `right_arm` / `left_arm` rotations; while blocking, a render-time overlay applies the `right_arm_bend` / `left_arm_bend` **+X** joint angle with highest weight over the current arm bend (fixing the previous reversed angle); it writes no bend outside blocking, so normal BC / FancyPlayerAnimation animation is untouched; no forced sneak legs/camera pose. After posing, the torso is re-attached to the waist (model y=12); the head snaps to the torso top and is lowered slightly to touch the body, while arms follow the torso's full transform. Legs keep their vanilla rendering (no forced `model.crouching` and no camera-pose changes).
 - Legs: do not take part in the block pose at all; they keep their vanilla rendering.
+- **Sneaking is suppressed while blocking**: blocking forces the player out of the sneak state (including clearing the local `shiftKeyDown` input); releasing right-click restores normal sneak input.
 - **Sprinting is disabled while blocking**; starting a block while sprinting interrupts the sprint immediately.
 - **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking so the block pose always wins.
 - A successful block does **not flash the player red**.
@@ -200,7 +202,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - Whenever the parry sound/particles actually trigger: the hand and weapon shake by about 2 px for ~0.1 s, the camera shakes slightly, and the player is pushed back about 1/4 block.
 - Slim/wide skins: reads `PlayerSkin.Model`; slim arm pivots sit 0.5 model units higher than wide, so the block pose compensates that offset (held-item placement keeps vanilla's slim offset).
 - Outer skin layers: sleeves and jacket are resynced after posing so the skin texture layers follow the parry; pants keep the vanilla leg pose.
-- Blocking follows the vanilla hurt path: the player is **immune to all damage while blocking**; each damage that would have applied triggers one successful block, costs **1 sharpness** and plays one parry sound. **After the block ends (right-click released), a 0.2 s (4 tick) invulnerability window remains.**
+- Blocking follows the vanilla hurt path but only covers damage coming from the **frontal 210° arc (105° each side)**; damage from behind/sides and environmental damage are not blocked. Each successful block costs **ceil(10% of the incoming damage)** sharpness and plays one parry sound; blocked damage is negated, and **after releasing right-click a 0.2 s (4 tick) invulnerability window remains**.
 - Releasing within **2 s** keeps the combo; blocking longer than 2 s and releasing breaks the combo.
 
 ## Weapons
@@ -230,7 +232,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 ```
 gradlew build
 # build/libs/bettercombat_neonarsenal-alpha1.jar
-# 235,729 B · SHA256 B8F90E26…BBCF
+# 239,880 B · SHA256 8E6EA545…3055
 ```
 
 ## License

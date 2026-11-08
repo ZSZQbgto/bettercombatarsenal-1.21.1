@@ -13,7 +13,9 @@
   "client": [
     "LivingEntityJumpMixin",
     "PlayerBlockPoseMixin",
-    "ClientLevelParrySoundMixin"
+    "ClientLevelParrySoundMixin",
+    "LocalPlayerSneakMixin",
+    "BlockBendRenderMixin"
   ],
   "injectors": {
     "defaultRequire": 1
