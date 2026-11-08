@@ -7,5 +7,14 @@
         "stream": false
       }
     ]
+  },
+  "landed": {
+    "subtitle": "subtitles.bettercombat_neonarsenal.landed",
+    "sounds": [
+      {
+        "name": "bettercombat_neonarsenal:landed",
+        "stream": false
+      }
+    ]
   }
 }

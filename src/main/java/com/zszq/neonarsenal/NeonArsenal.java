@@ -45,6 +45,7 @@ public final class NeonArsenal {
         ModCreativeTabs.TABS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::registerPayloads);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.SharpnessEvents::onIncomingDamage);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
@@ -83,6 +84,48 @@ public final class NeonArsenal {
                 com.zszq.neonarsenal.compat.JumpAttackHandler::onLivingJump);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.JumpAttackHandler::onPlayerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.FallSlamHandler::onIncomingDamage);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.FallSlamHandler::onPlayerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.FallSlamHandler::onLivingFall);
+    }
+
+    private void registerPayloads(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {
+        event.registrar("1").playToServer(
+                com.zszq.neonarsenal.compat.FallSlamPayload.TYPE,
+                com.zszq.neonarsenal.compat.FallSlamPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                        com.zszq.neonarsenal.compat.FallSlamHandler.beginSlam(player, payload.fallBlocks());
+                    }
+                }));
+        event.registrar("1").playToServer(
+                com.zszq.neonarsenal.compat.FallSlamWindupPayload.TYPE,
+                com.zszq.neonarsenal.compat.FallSlamWindupPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                        com.zszq.neonarsenal.compat.FallSlamHandler.setWindup(player, payload.windup());
+                    }
+                }));
+        event.registrar("1").playToServer(
+                com.zszq.neonarsenal.compat.FallSlamStrikePayload.TYPE,
+                com.zszq.neonarsenal.compat.FallSlamStrikePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                        com.zszq.neonarsenal.compat.FallSlamHandler.playStrikeSound(player);
+                    }
+                }));
+        event.registrar("1").playToServer(
+                com.zszq.neonarsenal.compat.FallSlamGlideStrikePayload.TYPE,
+                com.zszq.neonarsenal.compat.FallSlamGlideStrikePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                        com.zszq.neonarsenal.compat.FallSlamHandler.settleGlideStrike(player,
+                                payload.targetId(), payload.speed());
+                    }
+                }));
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

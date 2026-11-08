@@ -43,6 +43,7 @@ public final class BlockPose {
 
     private static final Map<UUID, Float> PROGRESS = new HashMap<>();
     private static final Map<PlayerModel<?>, float[]> RENDER_BENDS = new WeakHashMap<>();
+    private static final Map<UUID, Float> LEG_BLEND = new HashMap<>();
     private static Map<String, Bone> twoHanded;
     private static Map<String, Bone> dualWield;
     private static boolean loadTried;
@@ -50,7 +51,7 @@ public final class BlockPose {
     private BlockPose() {
     }
 
-    /** Advances the 0..1 pose blend for this frame; 10/s = 0.1 s transition. */
+    /** Advances the 0..1 pose blend for this frame; 10/s = 0.1 s block pose transition. */
     public static float progress(AbstractClientPlayer player, float deltaSeconds) {
         UUID id = player.getUUID();
         float target = isBlocking(player) ? 1.0F : 0.0F;
@@ -69,8 +70,14 @@ public final class BlockPose {
         return current;
     }
 
+    /** {@return the current 0..1 block-pose blend for this player without advancing it}. */
+    public static float progressOf(AbstractClientPlayer player) {
+        return player == null ? 0.0F : PROGRESS.getOrDefault(player.getUUID(), 0.0F);
+    }
+
     public static boolean isBlocking(Player player) {
         return player != null
+                && !player.isFallFlying()
                 && player.isUsingItem()
                 && player.getUseItem().getItem() instanceof SharpnessWeaponItem;
     }
@@ -105,8 +112,101 @@ public final class BlockPose {
         model.leftSleeve.copyFrom(model.leftArm);
         model.rightSleeve.copyFrom(model.rightArm);
         model.jacket.copyFrom(model.body);
+
+        // Block -> sneak transition: vanilla switches the legs to the sneaking position at once
+        // while the upper body still blends for 0.1 s. Lerp the legs by the same progress so they
+        // move together with the body. (Only active while the player actually crouches again.)
+        if (model.crouching && progress < 1.0F) {
+            float sneak = 1.0F - progress;
+            model.rightLeg.z = 4.0F * sneak;
+            model.leftLeg.z = 4.0F * sneak;
+            model.rightLeg.y = 12.0F + 0.2F * sneak;
+            model.leftLeg.y = 12.0F + 0.2F * sneak;
+        }
+
+        // Stationary file-leg pose vs. moving vanilla-walk pose blends over 0.1 s, same as the
+        // block pose blend.
+        boolean stationary = player.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4D
+                && player.walkAnimation.speed() < 0.02F;
+        boolean wantFileLegs = stationary && !model.crouching;
+        float deltaSeconds = Minecraft.getInstance().getFrameTimeNs() / 1_000_000_000.0F;
+        float legTarget = wantFileLegs ? 1.0F : 0.0F;
+        float legBlend = LEG_BLEND.getOrDefault(player.getUUID(), 0.0F);
+        float legStep = 10.0F * Math.max(0.0F, Math.min(0.1F, deltaSeconds));
+        legBlend += Math.max(-legStep, Math.min(legStep, legTarget - legBlend));
+        if (legBlend <= 0.001F) {
+            LEG_BLEND.remove(player.getUUID());
+            legBlend = 0.0F;
+        } else {
+            LEG_BLEND.put(player.getUUID(), legBlend);
+        }
+
+        // The block pose itself uses the 0.1 s transition; multiply it into the file-leg weight so
+        // idle <-> block and moving <-> stationary leg changes both finish in 0.1 s.
+        float fileLegWeight = legBlend * progress;
+        if (fileLegWeight > 0.0F) {
+            setBone(model.rightLeg, bones.get("right_leg"), -1.9F, 12.0F, 0.0F, fileLegWeight);
+            setBone(model.leftLeg, bones.get("left_leg"), 1.9F, 12.0F, 0.0F, fileLegWeight);
+            // The authored leg position has z=+2, which pulls the leg roots behind the body; keep
+            // the roots under the body so the legs stay attached to the torso.
+            model.rightLeg.z = lerp(model.rightLeg.z, 0.0F, fileLegWeight);
+            model.leftLeg.z = lerp(model.leftLeg.z, 0.0F, fileLegWeight);
+        } else if (!model.crouching) {
+            // Vanilla setupAnim already computed the walking rotations; only reset positions left
+            // over from the file pose.
+            model.rightLeg.x = -1.9F;
+            model.leftLeg.x = 1.9F;
+            model.rightLeg.y = 12.0F;
+            model.leftLeg.y = 12.0F;
+            model.rightLeg.z = 0.0F;
+            model.leftLeg.z = 0.0F;
+        }
+        model.leftPants.copyFrom(model.leftLeg);
+        model.rightPants.copyFrom(model.rightLeg);
+
+        // Lower the whole blocking pose so the authored file-leg soles touch the ground (model
+        // bottom = y 24). The offset follows the file-leg pose; while walking the vanilla legs swing
+        // and a full offset would make the whole torso bob up and down, so weight it by the file-leg
+        // blend: stationary blocking is grounded, walking keeps the torso steady.
+        float footOffset = groundOffset(model) * fileLegWeight;
+        if (Math.abs(footOffset) > 0.001F) {
+            shiftY(model.body, footOffset);
+            shiftY(model.head, footOffset);
+            shiftY(model.leftArm, footOffset);
+            shiftY(model.rightArm, footOffset);
+            shiftY(model.leftLeg, footOffset);
+            shiftY(model.rightLeg, footOffset);
+            shiftY(model.leftSleeve, footOffset);
+            shiftY(model.rightSleeve, footOffset);
+            shiftY(model.jacket, footOffset);
+            shiftY(model.leftPants, footOffset);
+            shiftY(model.rightPants, footOffset);
+        }
+
         RENDER_BENDS.put(model, new float[]{bendAngle(bones.get("right_arm_bend"), progress),
                 bendAngle(bones.get("left_arm_bend"), progress), progress});
+    }
+
+    /** {@return the vertical shift needed so the rotated leg soles sit on model y=24}. */
+    private static float groundOffset(PlayerModel<?> model) {
+        float bottom = Math.min(legBottom(model.rightLeg), legBottom(model.leftLeg));
+        return 24.0F - bottom;
+    }
+
+    private static float legBottom(ModelPart leg) {
+        if (leg == null) {
+            return 24.0F;
+        }
+        float cos = (float) Math.cos(leg.xRot);
+        float sin = Math.abs((float) Math.sin(leg.xRot));
+        // Leg cube is 12 units long and 4 units wide; lowest corner of the sole.
+        return leg.y + 12.0F * cos - 2.0F * sin;
+    }
+
+    private static void shiftY(ModelPart part, float offset) {
+        if (part != null) {
+            part.y += offset;
+        }
     }
 
     private static float bendAngle(Bone bendBone, float progress) {

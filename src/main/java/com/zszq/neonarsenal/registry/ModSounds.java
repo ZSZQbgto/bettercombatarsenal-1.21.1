@@ -19,6 +19,11 @@ public final class ModSounds {
             () -> SoundEvent.createVariableRangeEvent(
                     ResourceLocation.fromNamespaceAndPath(NeonArsenal.MODID, "parry")));
 
+    /** Fall-slam landing sound supplied in {@code resourcepacks/sound/landed.mp3}. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> LANDED = SOUND_EVENTS.register("landed",
+            () -> SoundEvent.createVariableRangeEvent(
+                    ResourceLocation.fromNamespaceAndPath(NeonArsenal.MODID, "landed")));
+
     private ModSounds() {
     }
 }

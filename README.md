@@ -10,7 +10,6 @@
 ## 安装
 
 - Minecraft 1.21.1、NeoForge 21.1.265、Java 21
-- 开发服务器：`gradlew runServer` 使用独立的 `run-server` 目录，只含服务端必要模组（Better Combat、cloth_config、playeranimator）；`runClient` 继续使用 `run`（含 Sodium/Iris/JEI 等客户端模组）
 - **必要前置**：Better Combat 2.4.0+、playeranimator、cloth_config
 - 可选：JEI（配方查看）、Sodium/Iris（光影兼容）、**LambDynamicLights**（动态光照）
 - **推荐同时安装 Sodium + LambDynamicLights**：锻入发光墨囊的武器会像发光地衣一样发出 7 级动态光
@@ -44,9 +43,9 @@
 
 ### 3. 两个开关
 
-**发光墨囊**开启刀刃发光与 BC 刀光，**烈焰粉**开启粒子；两者独立，每把武器各只能锻一次。未锻发光墨囊时，锻刃层与染料仍会给刀刃上色（不发光）。装有 LambDynamicLights 时，锻入发光墨囊的武器还会发出 **7 级动态光（等同发光地衣）**。
+**发光墨囊**开启刀刃发光与挥砍刀光，**烈焰粉**开启粒子；两者独立，每把武器各只能锻一次。未锻发光墨囊时，锻刃层与染料仍会给刀刃上色（不发光）。装有 LambDynamicLights 时，锻入发光墨囊的武器还会发出 **7 级动态光（等同发光地衣）**。
 
-| 锻入的开关 | 粒子 | BC 刀光 | 刀刃 |
+| 锻入的开关 | 粒子 | 挥砍刀光 | 刀刃 |
 |---|---|---|---|
 | 只烈焰粉 | 不发光尘粒 | 原版、不发光 | 有色不发光（有锻刃/染料时） |
 | 只发光墨囊 | 无 | 发光、着色 | 发光、着色 |
@@ -54,34 +53,46 @@
 
 ### 4. 颜色
 
-- 单层锻刃：该层纯色；多层锻刃：HSV 色相插值混合色。
-- 颜色同时作用于刀刃（含未发光墨囊时的非发光着色）、刀刃光效、粒子、BC 刀光。
-- 任意染料 1:1 染色、1 级经验、无限次；每次与当前颜色 50/50 混合，只留最终一色。
+- 单层锻刃：该层纯色；多层锻刃：取各层颜色之间的过渡混色。
+- 颜色同时作用于刀刃（含未发光墨囊时的非发光着色）、刀刃光效、粒子与挥砍刀光。
+- 任意染料 1:1 染色、1 级经验、无限次；每次与当前颜色各半混合，只留最终一色。
 - 染料颜色优先于混合色；整条颜色链在 Tooltip 的「着色模块/锻刃颜色」中显示。
 
 ### 5. 跳劈
 
-- 起跳后至落地前均可触发（上升与下落都算）；沿用原版空中判定：水中、攀爬、骑乘、失明时不触发。
+- 起跳后至落地前均可触发（上升与下落都算）；水中、攀爬、骑乘、失明时不触发。
 - 触发时播放巨刃下劈动作、使用武器自身音效、击退 V、重置连招。
 - 跳劈后攻击冷却的前半段禁止起跳；落地后清空跳劈窗口。
+- 创造飞行时攻击使用平地出招，不触发跳劈。
 
-### 6. 格挡
+### 6. 下落斩击
 
-- 手持武器长按右键进入格挡（右键方块同样进入格挡，不触发方块交互）；松开恢复，进入/退出各有 **0.1 秒**过渡。
-- 单持武器与双手武器使用**双手格挡**姿态；真正双持（副手也持本模组武器）使用**双持格挡**姿态（均来自资源包中的一帧动作）。
-- 躯干/身体/头部/手部：**只依靠提供的动作文件**（不叠加其它玩家动画）；手臂使用动作文件中的 `right_arm` / `left_arm` 旋转；格挡时通过渲染前 overlay 把 `right_arm_bend` / `left_arm_bend` 的 **+X** 关节角以最高权重叠加到当前手臂 bend 上（修正之前角度反向）；非格挡不写 bend，不影响 BC / FancyPlayerAnimation；不再强制潜行腿/相机姿态；躯干旋转后重新贴合腰部（模型 y=12），头部吸附到躯干顶部并略微下移贴住身体，手臂按躯干完整变换定位；腿部保持原版渲染，身体底部与腿部对齐，不出现间隙。
-- 腿部：完全不参与格挡动作，保持原版正常渲染。
-- **格挡时屏蔽潜行**：格挡期间强制退出潜行（含清空本地输入 `shiftKeyDown`），右键格挡时不会进入潜行状态；松开后恢复普通潜行输入。
-- **格挡期间不能疾跑**；若开始格挡时正在疾跑，会立即中断疾跑。
-- **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
-- 格挡成功时**不显示受击红闪**。
-- 格挡成功时在武器位置迸发**中等密度火星粒子**：无需烈焰粉锻刃即可出现；颜色跟随当前武器的粒子颜色；锻入发光墨囊时火星发光，否则为普通不着火火星。
-- **两次格挡之间**的音效与粒子强制间隔 **随机 0.3–0.8 秒**（每次重新随机）；史莱姆等高频攻击生物不会逐 tick 触发；间隔内的格挡仍正常免伤/扣锋利度，但不再播放音效与粒子。
-- 每次**触发格挡音效/粒子**时：手部与武器颤动约 2px、持续约 0.1 秒；视角轻微颤动；角色向后平移约 1/4 格。
-- 宽窄皮肤适配：读取玩家 `PlayerSkin.Model`，slim 皮肤的手臂枢轴比 wide 高 0.5 模型单位，格挡姿态会补偿该偏移；手中武器位置沿用原版 slim 偏移。
-- 皮肤外层同步：袖子与外套在姿态计算后重新同步，避免外层皮肤贴图停在 idle 姿态；裤腿保持原版腿部姿态。
-- 格挡判定沿用原版受击路径，但只对**前方 210°（左右各 105°）**内来源的伤害生效；背后/侧面来源与环境伤害不受格挡。每次成功格挡消耗 **本次伤害 ×10% 向上取整**的锋利度，并播放一次格挡音效；格挡期间**免疫被格挡的伤害**，**松开右键后获得 0.2 秒（4 tick）无敌**。
+- 自由下落时按住攻击键（已累计下落超过 5 格，或离地 5 格以上且正在下降）；长按 0.15 秒进入下落斩击；短按则会在松开时打一次普通攻击。**拥有缓降效果时无法触发**。
+- 起手动作停在下劈前 1/3 的蓄力姿势；下落过程中风声随下落速度增强——坠得越快，风越大。
+- 距地 4 格时恢复动作，从 1/3 处继续劈下，并播放巨刃第三段斩击音效；无论落地前后，整段动作都以原速播完，不会被落地截断。
+- 到最终帧用 0.3 秒淡出回站立姿态；这 0.3 秒内无法攻击，结束后恢复正常攻击。
+- 落地有专属落地音效；落地时若武器锻入烈焰粉，会迸发大量粒子。
+- **下落斩击的额外攻击力随实际下落高度提升，且没有上限**：第 1–10 格每格 +4 伤害，第 11–20 格每格 +2 伤害，之后每格 +1 伤害。
+- 松开攻击键（尚未到 4 格）会在 0.2 秒内淡回下落姿态，并重置已累计的下落高度，需要重新按住再下落超过 5 格才会再次触发。
+- 下落斩击：下落 **<10 格免疫摔落伤害**；**>10 格每多 3 格扣 1 点血量**，最低保留 **1 点血**，不会摔死；普通下落不受影响。
+- **装备鞘翅时**：下落斩击蓄力过程中单击空格展开滑翔会**保持当前蓄力姿势**；此后不再按“距地 4 格/落地”触发，而是**撞击生物时触发斩击**。滑翔结束时若没有撞到生物，斩击不会触发，蓄力自动收回。
+- **鞘翅滑翔中**（手持本模组武器）**右键**可直接进入同样的滑行斩击蓄力（1/3 定格），撞到生物时触发斩击；滑翔斩击的额外攻击力按**撞击瞬间的速度**计算：把速度换算成等效下落高度（`v = √(2·0.08·h)`）后套用同一分档，与下落斩击保持平衡。
+
+### 7. 格挡
+
+- 手持武器长按右键进入格挡（对方块右键同样进入格挡，不触发方块交互）；松开恢复，进入/退出各有 **0.1 秒**过渡。
+- 右键优先级：目标为工作方块（带 GUI，如工作台/熔炉/箱子）时，若**玩家与工作方块之间**有敌对生物 → 格挡；否则正常工作方块；非工作方块 → 格挡。
+- 单持武器与双手武器使用**双手格挡**姿态；真正双持（副手也持本模组武器）使用**双持格挡**姿态。
+- 格挡期间**强制退出潜行**，且**无法疾跑**；若开始格挡时正在疾跑，会立即中断疾跑。
+- 只格挡**前方 210°（左右各 105°）**内来源的伤害；背后/侧面来源与环境伤害不受格挡。
+- 成功格挡**免疫本次伤害**；**触发格挡音效/粒子时**消耗 **本次伤害 ×10%（向上取整）**的锋利度，间隔内的格挡不消耗；**松开右键后获得 0.2 秒无敌**。
+- 格挡成功时**不显示受击红闪**；武器处迸发中等密度火星粒子（无需烈焰粉，颜色跟随当前武器粒子色，锻入发光墨囊时发光）。
+- 格挡的音效、粒子与锋利度消耗有 **0.3–0.8 秒随机间隔**（每次重新随机）；间隔内的格挡仍正常免伤，但不再播放音效与粒子，也**不扣锋利度**。
+- 每次触发格挡音效/粒子时：手部与武器颤动约 2px、持续约 0.1 秒；视角轻微颤动；角色向后平移约 1/4 格。
 - 格挡 **2 秒内**松开不打断连招；超过 2 秒再松开则打断连招。
+- 宽窄皮肤均适配；格挡时袖子与外套会跟随动作。
+- **穿戴鞘翅格挡时**，鞘翅会收拢为潜行时的姿态，并跟随躯干/肩膀一起运动，不会与身体分离。
+- **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
 
 ## 武器
 
@@ -98,20 +109,12 @@
 ## 工艺速查
 
 - **冷却跟武器走**：存在物品上按游戏时间计算，丢弃、换手、重进都不刷新。
-- **双持**：锻刃与锋利度只由主手攻击触发；副手砍人不触发、不消耗；渲染各自独立。
+- **双持**：锻刃与锋利度只由主手攻击触发；副手砍人不触发、不消耗；两手外观各自独立。
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
 - **Tooltip**：平时显示刀刃锐度、颜色（染色显示为着色模块，仅锻刃层时显示锻刃颜色）、锻刃效果；按住 Shift 看综合性能与每层说明。
 - **配置**：模组列表滑条——粒子密度 0–3、刀刃发光强度 0–1。
 - **JEI**：154 条锻刃配方，铁砧为催化剂。
-- **多人**：锻刃、冷却、粒子判定在服务端，客户端只负责渲染。
-
-## 构建
-
-```
-gradlew build
-# build/libs/bettercombat_neonarsenal-alpha1.jar
-# 239,880 B · SHA256 8E6EA545…3055
-```
+- **多人**：锻刃、冷却与粒子效果在多人联机下保持一致。
 
 ## 许可
 
@@ -132,7 +135,6 @@ gradlew build
 ## Requirements
 
 - Minecraft 1.21.1, NeoForge 21.1.265, Java 21
-- Dev server: `gradlew runServer` runs from its own `run-server` directory with only the server-side mods (Better Combat, cloth_config, playeranimator); `runClient` keeps using `run` (with Sodium/Iris/JEI etc.)
 - **Required**: Better Combat 2.4.0+, playeranimator, cloth_config
 - Optional: JEI (recipes), Sodium/Iris (shader compatibility), **LambDynamicLights** (dynamic lighting)
 - **Sodium + LambDynamicLights recommended**: a weapon forged with a glow ink sac emits light level 7, the same as glow lichen
@@ -166,9 +168,9 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 
 ### 3. Two switches
 
-**Glow Ink Sac** enables blade glow and the BC trail; **Blaze Powder** enables particles; independent, one forge each per weapon.
+**Glow Ink Sac** enables blade glow and the slash trail; **Blaze Powder** enables particles; independent, one forge each per weapon. Without glow ink, forge layers and dye still tint the blade (without glowing). With LambDynamicLights installed, a weapon forged with a glow ink sac also emits **light level 7 (the same as glow lichen)**.
 
-| Forged switch | Particles | BC trail | Blade |
+| Forged switch | Particles | Slash trail | Blade |
 |---|---|---|---|
 | Blaze only | Non-glowing dust | Original, no glow | Tinted, no glow (with layers/dye) |
 | Glow ink only | None | Glowing, coloured | Glowing, coloured |
@@ -176,34 +178,46 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 
 ### 4. Colour
 
-- One layer: solid colour; several layers: HSV hue-interpolated mixed colour.
-- The colour applies to the blade (including a non-glowing tint before glow ink), blade glow, particles and the BC trail.
+- One layer: solid colour; several layers: a blended transition colour between them.
+- The colour applies to the blade (including a non-glowing tint before glow ink), blade glow, particles and the slash trail.
 - Any dye, 1:1, 1 level, unlimited; each blends 50/50 with the current colour, keeping one final colour.
 - Dye overrides the mixed colour; the resulting colour is shown in the tooltip (colour module / forge colour).
 
 ### 5. Jump slam
 
-- Any time after jumping and before landing counts (rising or falling), using vanilla airborne rules; in water, on ladders, riding or blinded it does not trigger.
+- Any time after jumping and before landing counts (rising or falling); in water, on ladders, riding or blinded it does not trigger.
 - On trigger: claymore slam animation, the weapon's own sound, Knockback V, combo reset.
 - The first half of the attack cooldown blocks jumping; the jump window is cleared on landing.
+- Creative-flight attacks use the normal ground attack instead of the jump slam.
 
-### 6. Blocking
+### 6. Falling slash
+
+- Hold attack during a free fall (more than 5 blocks already fallen, or more than 5 blocks above the ground while descending); holding for 0.15 s enters the falling slash, while a short tap performs one normal attack on release. **The Slow Falling effect prevents it entirely.**
+- The wind-up pose freezes at 1/3, just before the downward chop; during the fall a wind sound grows with your falling speed.
+- Four blocks above the ground the animation resumes from the 1/3 pose and the claymore's third attack swing sound plays; the whole animation always finishes at original speed, before or after landing, and is never cut by landing.
+- The final frame fades back to idle over 0.3 s; attacks are locked for those 0.3 s and restored afterwards.
+- Landing plays its own landing sound; if the weapon was forged with blaze powder, landing emits a large spark burst.
+- **Extra attack power grows with the actual fall height and has no cap**: +4 damage per block for the first 10 blocks, +2 per block for blocks 11-20, and +1 per block beyond 20.
+- Releasing attack before the 4-block trigger fades back over 0.2 s and resets the measured fall height, so a new press must accumulate more than 5 blocks again.
+- Falling slash: **<10 blocks is fall-damage immune**; above 10 blocks lose **1 HP per extra 3 blocks**, clamped to **1 HP** so it cannot kill. Normal falls are unaffected.
+- **With an elytra**: deploying glide during the windup keeps the frozen pose; the slash then no longer triggers by ground distance/landing but **only when hitting a creature**. If the glide ends without hitting anything, no strike is made and the windup is retracted.
+- **While elytra gliding** (holding an arsenal weapon), **right-click** starts the same glide windup (frozen at 1/3); hitting a creature triggers the slash. Its extra attack power follows the **impact speed**: the speed is converted to the equivalent free-fall height (`v = √(2·0.08·h)`) and the same height tiers are applied, keeping it balanced with the normal falling slash.
+
+### 7. Blocking
 
 - Hold right-click with a weapon to block (right-clicking a block also blocks instead of interacting); release to recover, with a **0.1 s** transition in and out.
-- Single-wield and two-handed weapons use the **two-handed parry**; genuinely dual-wielded pairs (offhand also holds an arsenal weapon) use the **dual-wield parry** (both supplied one-frame animations).
-- Torso/body/head/hands: driven **only by the supplied animation file** (no other player animation is stacked). Arms use the animation file's `right_arm` / `left_arm` rotations; while blocking, a render-time overlay applies the `right_arm_bend` / `left_arm_bend` **+X** joint angle with highest weight over the current arm bend (fixing the previous reversed angle); it writes no bend outside blocking, so normal BC / FancyPlayerAnimation animation is untouched; no forced sneak legs/camera pose. After posing, the torso is re-attached to the waist (model y=12); the head snaps to the torso top and is lowered slightly to touch the body, while arms follow the torso's full transform. Legs keep their vanilla rendering (no forced `model.crouching` and no camera-pose changes).
-- Legs: do not take part in the block pose at all; they keep their vanilla rendering.
-- **Sneaking is suppressed while blocking**: blocking forces the player out of the sneak state (including clearing the local `shiftKeyDown` input); releasing right-click restores normal sneak input.
-- **Sprinting is disabled while blocking**; starting a block while sprinting interrupts the sprint immediately.
-- **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking so the block pose always wins.
-- A successful block does **not flash the player red**.
-- A successful block emits a **medium-density spark burst** at the weapon: it appears without blaze powder, uses the current weapon particle colour, and glows only when a glow ink sac was forged.
-- Between two blocks the sound and particles have a forced **random 0.3–0.8 s gap**, rerolled every time; fast attackers such as slimes cannot retrigger them every tick. Blocks during the gap still negate damage and spend sharpness but do not play sound/particles.
-- Whenever the parry sound/particles actually trigger: the hand and weapon shake by about 2 px for ~0.1 s, the camera shakes slightly, and the player is pushed back about 1/4 block.
-- Slim/wide skins: reads `PlayerSkin.Model`; slim arm pivots sit 0.5 model units higher than wide, so the block pose compensates that offset (held-item placement keeps vanilla's slim offset).
-- Outer skin layers: sleeves and jacket are resynced after posing so the skin texture layers follow the parry; pants keep the vanilla leg pose.
-- Blocking follows the vanilla hurt path but only covers damage coming from the **frontal 210° arc (105° each side)**; damage from behind/sides and environmental damage are not blocked. Each successful block costs **ceil(10% of the incoming damage)** sharpness and plays one parry sound; blocked damage is negated, and **after releasing right-click a 0.2 s (4 tick) invulnerability window remains**.
+- Right-click priority: on a work block (workbench/furnace/chest etc.), if a hostile mob stands between you and that block → block; otherwise use the block normally; other blocks → block.
+- Single-wield and two-handed weapons use the **two-handed parry**; genuinely dual-wielded pairs (offhand also holds an arsenal weapon) use the **dual-wield parry**.
+- While blocking, sneaking is suppressed and sprinting is disabled; starting a block while sprinting interrupts the sprint immediately.
+- Only damage coming from the **frontal 210° arc (105° each side)** is blocked; damage from behind/sides and environmental damage are not.
+- A successful block negates the incoming damage; the **parry sound/particles** trigger costs **ceil(10% of the incoming damage)** sharpness (blocks inside the gap cost none), and grants a **0.2 s invulnerability window after releasing right-click**.
+- A successful block does **not flash the player red** and emits a **medium-density spark burst** at the weapon (no blaze powder needed; uses the current weapon particle colour and glows when glow ink was forged).
+- Block sounds, particles and sharpness cost have a forced **random 0.3–0.8 s gap**, rerolled every time; blocks during the gap still negate damage but play no sound/particles and cost no sharpness.
+- Whenever sound/particles actually trigger: the hand and weapon shake by about 2 px for ~0.1 s, the camera shakes slightly, and the player is pushed back about 1/4 block.
 - Releasing within **2 s** keeps the combo; blocking longer than 2 s and releasing breaks the combo.
+- Slim and wide skins both fit; sleeves and jacket follow the block pose.
+- **Blocking with an elytra equipped** folds the wings into the sneaking elytra pose and keeps them attached to the posed torso/shoulders instead of floating apart.
+- **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking.
 
 ## Weapons
 
@@ -220,20 +234,12 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 ## Quick reference
 
 - **Cooldowns follow the weapon**: stored on the item as game time; dropping, swapping or rejoining never resets them.
-- **Dual wielding**: forge and sharpness effects trigger only from the main hand; off-hand hits trigger nothing; rendering is per hand.
+- **Dual wielding**: forge and sharpness effects trigger only from the main hand; off-hand hits trigger nothing; each hand keeps its own appearance.
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.
 - **Tooltip**: shows blade sharpness, colour (colour module when dyed, forge colour when only layers are present) and forge effects; hold Shift for totals and per-layer text.
 - **Config**: mod-list sliders — particle density 0–3, blade glow intensity 0–1.
 - **JEI**: 154 forging recipes with the anvil as catalyst.
-- **Multiplayer**: forging, cooldowns and particles are server-authoritative; clients only render.
-
-## Build
-
-```
-gradlew build
-# build/libs/bettercombat_neonarsenal-alpha1.jar
-# 239,880 B · SHA256 8E6EA545…3055
-```
+- **Multiplayer**: forging, cooldowns and particle effects stay consistent in multiplayer.
 
 ## License
 

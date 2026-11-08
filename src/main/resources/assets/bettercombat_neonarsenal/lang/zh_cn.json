@@ -41,5 +41,6 @@
   "tooltip.bettercombat_neonarsenal.forge.echo.effect": "效果：你周围8 格内的敌对生物进入8秒的互相攻击，效果冷却 30 秒",
   "item.bettercombat_neonarsenal.spear": "长枪",
   "tooltip.bettercombat_neonarsenal.forge_colour": "锻刃颜色: #%s",
-  "subtitles.bettercombat_neonarsenal.parry": "格挡"
+  "subtitles.bettercombat_neonarsenal.parry": "格挡",
+  "subtitles.bettercombat_neonarsenal.landed": "落地"
 }

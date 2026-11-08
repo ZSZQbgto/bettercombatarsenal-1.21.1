@@ -11,10 +11,13 @@ import com.zszq.neonarsenal.item.Forge;
 import com.zszq.neonarsenal.registry.ModSounds;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.InteractionHand;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -43,6 +46,7 @@ public final class BlockHandler {
     /** {@return true while the player is holding right-click with an arsenal weapon}. */
     public static boolean isBlocking(net.minecraft.world.entity.player.Player player) {
         return player != null
+                && !player.isFallFlying()
                 && player.isUsingItem()
                 && player.getUseItem().getItem() instanceof SharpnessWeaponItem;
     }
@@ -65,9 +69,6 @@ public final class BlockHandler {
             return;
         }
         ItemStack weapon = player.getUseItem();
-        // One block costs ceil(10% of the incoming damage) sharpness.
-        int loss = (int) Math.ceil(event.getAmount() * 0.10D);
-        Sharpness.set(weapon, Math.max(0, Sharpness.get(weapon) - loss));
         // Cancelling the damage would otherwise skip the hurt cooldown, letting the same attacker
         // hit again on every tick and re-trigger the parry sound continuously. Grant the normal
         // short invulnerability window so one hit produces exactly one parry sound.
@@ -80,6 +81,10 @@ public final class BlockHandler {
         if (now >= nextFx) {
             player.getPersistentData().putLong("bettercombat_neonarsenal_next_parry_fx",
                     now + 6L + player.getRandom().nextInt(11));
+            // Only a block that actually triggers the parry feedback costs sharpness; blocks inside
+            // the 0.3-0.8 s gap still negate damage but are free.
+            int loss = (int) Math.ceil(event.getAmount() * 0.10D);
+            Sharpness.set(weapon, Math.max(0, Sharpness.get(weapon) - loss));
             player.level().playSound(null, player.blockPosition(), ModSounds.PARRY.get(),
                     SoundSource.PLAYERS, 1.0F, 1.0F);
             if (player.level() instanceof ServerLevel level) {
@@ -133,12 +138,53 @@ public final class BlockHandler {
         }
     }
 
+    /** {@return true when a living hostile stands between the player and the target block}. */
+    private static boolean hasHostileBetween(net.minecraft.world.entity.player.Player player, BlockPos pos) {
+        Vec3 start = player.position();
+        Vec3 end = Vec3.atCenterOf(pos);
+        Vec3 dir = new Vec3(end.x - start.x, 0.0D, end.z - start.z);
+        double lenSq = dir.lengthSqr();
+        if (lenSq < 1.0E-6D) {
+            return false;
+        }
+        AABB area = player.getBoundingBox().inflate(Math.sqrt(lenSq) + 2.0D, 2.5D, Math.sqrt(lenSq) + 2.0D);
+        for (Entity entity : player.level().getEntities(player, area,
+                e -> e instanceof Enemy && e.isAlive())) {
+            Vec3 rel = new Vec3(entity.getX() - start.x, 0.0D, entity.getZ() - start.z);
+            double t = rel.dot(dir) / lenSq;
+            if (t < 0.0D || t > 1.0D) {
+                continue;
+            }
+            Vec3 closest = new Vec3(start.x + dir.x * t, 0.0D, start.z + dir.z * t);
+            double dx = entity.getX() - closest.x;
+            double dz = entity.getZ() - closest.z;
+            if (dx * dx + dz * dz <= 2.25D && Math.abs(entity.getY() - player.getY()) < 2.5D) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Right-clicking a block with a weapon starts blocking instead of interacting with the block. */
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getHand() != InteractionHand.MAIN_HAND) {
             return;
         }
         if (!(event.getEntity().getMainHandItem().getItem() instanceof SharpnessWeaponItem)) {
+            return;
+        }
+        // During an elytra glide right-click is the falling slash, so no block interaction/blocking.
+        if (event.getEntity().isFallFlying()) {
+            event.setCanceled(true);
+            return;
+        }
+        // Right-click priority (BC-style interaction order):
+        //   hostile mob in front -> block
+        //   work block (has a menu/GUI) -> let the block interact normally
+        //   otherwise -> block instead of interacting with the block
+        boolean workBlock = event.getLevel().getBlockState(event.getPos())
+                .getMenuProvider(event.getLevel(), event.getPos()) != null;
+        if (workBlock && !hasHostileBetween(event.getEntity(), event.getPos())) {
             return;
         }
         event.setCanceled(true);

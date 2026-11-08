@@ -50,6 +50,7 @@ public final class NeonArsenalClient {
         modEventBus.addListener(this::registerParticleProviders);
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.addListener(this::clientTick);
+        NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.FallSlamClient::preTick);
         NeoForge.EVENT_BUS.addListener(FirstPersonGlowPass::render);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onRenderHand);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onCameraAngles);
@@ -62,6 +63,7 @@ public final class NeonArsenalClient {
     private void clientTick(ClientTickEvent.Post event) {
         WeaponTrailFx.tick(Minecraft.getInstance());
         com.zszq.neonarsenal.client.fx.BlockShakeEffects.tick();
+        com.zszq.neonarsenal.client.FallSlamClient.tick();
         if (Minecraft.getInstance().player != null
                 && com.zszq.neonarsenal.client.BlockPose.isBlocking(Minecraft.getInstance().player)) {
             // Blocked hits should not flash the player red.

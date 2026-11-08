@@ -45,6 +45,10 @@ public class SharpnessWeaponItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand usedHand) {
         if (usedHand == InteractionHand.MAIN_HAND) {
+            // While gliding, right-click belongs to the falling slash (glide windup), not to blocking.
+            if (player.isFallFlying()) {
+                return InteractionResultHolder.fail(player.getItemInHand(usedHand));
+            }
             // Blocking has priority over item/attack/switch cooldowns: clear any item cooldown.
             player.getCooldowns().removeCooldown(this);
             // Blocking cannot be combined with sprinting: interrupt an active sprint immediately.

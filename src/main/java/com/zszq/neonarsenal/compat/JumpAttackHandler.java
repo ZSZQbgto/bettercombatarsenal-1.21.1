@@ -86,7 +86,8 @@ public final class JumpAttackHandler {
      * @param comboCount Better Combat's current combo counter
      */
     public static Object forPlayer(Player player, int comboCount) {
-        if (player == null || player.onGround()) {
+        if (player == null || player.onGround() || player.getAbilities().flying) {
+            // Creative flight attacks use the normal ground attack, not the jump slam.
             return null;
         }
         // Vanilla-style airborne attack conditions: any time between jumping and landing counts,
@@ -103,6 +104,11 @@ public final class JumpAttackHandler {
         // current attack for animation/pose code while the player is merely jumping; without this
         // guard a normal jump would already start the jump-attack cooldown and block jumping.
         if (player.level().isClientSide() && !isAttackInputActive(player)) {
+            return null;
+        }
+        if (player.level().isClientSide()
+                && com.zszq.neonarsenal.compat.FallSlamState.allowNormalAttack) {
+            // A short tap during a long fall is a normal attack, not the jump slam.
             return null;
         }
         init();

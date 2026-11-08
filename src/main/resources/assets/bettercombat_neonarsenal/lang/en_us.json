@@ -41,5 +41,6 @@
   "tooltip.bettercombat_neonarsenal.forge.echo.effect": "Effect: hostile mobs within 8 blocks fight each other for 8 s. Cooldown: 30 s.",
   "item.bettercombat_neonarsenal.spear": "Spear",
   "tooltip.bettercombat_neonarsenal.forge_colour": "Forge colour: #%s",
-  "subtitles.bettercombat_neonarsenal.parry": "Parry"
+  "subtitles.bettercombat_neonarsenal.parry": "Parry",
+  "subtitles.bettercombat_neonarsenal.landed": "Landing"
 }

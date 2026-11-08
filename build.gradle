@@ -133,6 +133,8 @@ configurations {
 dependencies {
     // JEI integration (optional compile-time dependency; jar lives in run/mods)
     compileOnly fileTree(dir: "run/mods", include: "*jei*.jar")
+    compileOnly fileTree(dir: "run/mods", include: "bettercombat-*.jar")
+    compileOnly fileTree(dir: "run/mods", include: "player-animation-lib-*.jar")
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

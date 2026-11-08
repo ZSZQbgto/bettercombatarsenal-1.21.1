@@ -6,16 +6,27 @@
   "plugin": "com.zszq.neonarsenal.mixin.NeonArsenalMixinPlugin",
   "mixins": [
     "bettercombat.PlayerAttackHelperMixin",
-    "bettercombat.SlashParticleUtilMixin",
     "AnvilMenuFreeRepairMixin",
-    "CreeperExplosionMixin"
+    "CreeperExplosionMixin",
+    "bettercombat.ServerNetworkFallSlamMixin"
   ],
   "client": [
     "LivingEntityJumpMixin",
     "PlayerBlockPoseMixin",
+    "ElytraLayerBlockPoseMixin",
+    "ElytraModelBlockPoseMixin",
     "ClientLevelParrySoundMixin",
     "LocalPlayerSneakMixin",
-    "BlockBendRenderMixin"
+    "BlockBendRenderMixin",
+    "MinecraftFallSlamMixin",
+    "MinecraftAttackAccessor",
+    "bettercombat.ClientPlayerAttackAnimationMixin",
+    "bettercombat.FallSlamStopAnimationMixin",
+    "MinecraftContinueAttackMixin",
+    "bettercombat.ClientNetworkFallSlamMixin",
+    "bettercombat.SlashTrailFallSlamMixin",
+    "bettercombat.SlashParticleUtilMixin",
+    "bettercombat.FallSlamBetterCombatGateMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -249,6 +249,46 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 ## 8. 格挡（Blocking）
 
 - 手持任意本模组武器长按右键进入格挡；`SharpnessWeaponItem#use` 开始物品使用，松开即停止。
-- 动画：客户端 `BlockPose` 读取 `assets/bettercombat_neonarsenal/animations/two_handed_parry.json` / `dual_wield_parry.json`（已同步 resourcepacks 最新版本），在 `PlayerModel#setupAnim` 末尾混合；进入/退出各 0.1 秒。单持武器与双手武器使用双手姿态；仅当副手也持本模组武器（真正双持）时使用双持姿态。slim 皮肤补偿手臂枢轴 0.5 单位偏移；躯干/身体/头部/手部只使用动作文件（不叠加其它动画）；手臂应用动作文件的 `right_arm/left_arm` 旋转；格挡时在 `AgeableListModel.renderToBuffer` 前由 `BlockBendRenderMixin` 调用 `FpaBend.blend`，读取 `right_arm_bend/left_arm_bend` 第一分量（**正 X**，修正先前反向）作为关节角，以进度作为权重叠加到当前 bend；非格挡不写 bend；躯干旋转后重新贴合腰部（y=12），头部吸附到躯干顶部并下移 0.5 单位贴住身体；腿部保持原版渲染（回滚强制 crouch/相机姿态改动）；，手臂按躯干旋转 + 最终位移的完整变换定位，避免身体、头手与腿的间隙；腿部完全不参与格挡、保持原版；袖子与外套在姿态后重新 `copyFrom`（裤腿不覆盖）。格挡时屏蔽潜行：格挡期间每 tick 强制 `setShiftKeyDown(false)` 且客户端 setPose(STANDING)（服务端/客户端），相机/眼高保持站立，松开后恢复普通潜行输入。格挡期间禁止疾跑，正在疾跑会立即中断；同时屏蔽潜行。格挡优先级最高：`use` 清除物品冷却，不受攻击/切换武器冷却影响；格挡时取消左键攻击与挖掘事件。格挡判定沿用原版受击路径但限定前方 210°（±105°）：每次该范围内会生效的伤害事件触发一次成功格挡，消耗 ceil(伤害×10%) 锋利度、播放音效、格挡期间取消所有伤害（持续无敌）；松开格挡结束后额外给予 4 tick（0.2 秒）无敌；清除受击红闪、在武器位置发送 14 颗火星粒子（无需烈焰粉；颜色取 `Forge.displayColor`，锻入发光墨囊时粒子 full-bright 发光，否则使用世界光照）；音效与粒子按玩家持久数据记录下一次可用时间，两次之间强制随机 0.3–0.8 秒间隔（6–16 tick，每次重掷），避免史莱姆等高频率攻击逐 tick 触发。无额外击退抗性属性；环境伤害与背后/侧面伤害不受格挡。姿态 mixin 使用较低优先级，确保在其它玩家动画的 TAIL 注入之后应用，手部动作为**加法叠加**（不替换其它动作），腿部保持原版渲染（回滚强制 crouch/相机姿态改动）；渲染。
+- 动画：客户端 `BlockPose` 读取 `assets/bettercombat_neonarsenal/animations/two_handed_parry.json` / `dual_wield_parry.json`（已同步 resourcepacks 最新版本），在 `PlayerModel#setupAnim` 末尾混合；进入/退出各 0.1 秒。单持武器与双手武器使用双手姿态；仅当副手也持本模组武器（真正双持）时使用双持姿态。slim 皮肤补偿手臂枢轴 0.5 单位偏移；躯干/身体/头部/手部只使用动作文件（不叠加其它动画）；手臂应用动作文件的 `right_arm/left_arm` 旋转；格挡时在 `AgeableListModel.renderToBuffer` 前由 `BlockBendRenderMixin` 调用 `FpaBend.blend`，读取 `right_arm_bend/left_arm_bend` 第一分量（**正 X**，修正先前反向）作为关节角，以进度作为权重叠加到当前 bend；非格挡不写 bend；躯干旋转后重新贴合腰部（y=12），头部吸附到躯干顶部并下移 0.5 单位贴住身体；格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；不强制 crouch、不改相机；，手臂按躯干旋转 + 最终位移的完整变换定位，避免身体、头手与腿的间隙；腿部完全不参与格挡、保持原版；袖子与外套在姿态后重新 `copyFrom`（裤腿不覆盖）。格挡时屏蔽潜行：格挡期间每 tick 强制 `setShiftKeyDown(false)` 且客户端 setPose(STANDING)（服务端/客户端），相机/眼高保持站立，松开后恢复普通潜行输入。格挡期间禁止疾跑，正在疾跑会立即中断；同时屏蔽潜行。格挡优先级最高：`use` 清除物品冷却，不受攻击/切换武器冷却影响；格挡时取消左键攻击与挖掘事件。格挡判定沿用原版受击路径但限定前方 210°（±105°）：每次该范围内会生效的伤害事件触发一次成功格挡，消耗 ceil(伤害×10%) 锋利度、播放音效、格挡期间取消所有伤害（持续无敌）；松开格挡结束后额外给予 4 tick（0.2 秒）无敌；清除受击红闪、在武器位置发送 14 颗火星粒子（无需烈焰粉；颜色取 `Forge.displayColor`，锻入发光墨囊时粒子 full-bright 发光，否则使用世界光照）；音效与粒子按玩家持久数据记录下一次可用时间，两次之间强制随机 0.3–0.8 秒间隔（6–16 tick，每次重掷），避免史莱姆等高频率攻击逐 tick 触发。无额外击退抗性属性；环境伤害与背后/侧面伤害不受格挡。姿态 mixin 使用较低优先级，确保在其它玩家动画的 TAIL 注入之后应用，手部动作为**加法叠加**（不替换其它动作），格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；不强制 crouch、不改相机；渲染。
 - 判定：服务端 `LivingIncomingDamageEvent` 中若玩家正在使用本模组武器，则取消本次攻击伤害，调用 `Sharpness.consume` 消耗 1 点，并播放 `bettercombat_neonarsenal:parry`；播放时客户端通过监听本地 parry 音效触发手部/武器 2px、0.1s 颤动与视角轻微颤动（不再使用自定义网络包），服务端给玩家一个约 1/4 格的后退推力；取消伤害的同时给予 4 tick 受击无敌，避免同一攻击逐 tick 重复触发音效。
 - 连招：`PlayerTickEvent` 记录格挡开始时间；松开时若持续 >40 tick（2 秒）则通过反射调用 `PlayerAttackProperties.setComboCount(player, -1)` 打断连招，≤40 tick 保持连招。
+
+格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；格挡静止时腿部使用动画文件 right_leg/left_leg 并把腿根 z 从 +2 收到 0 与 body 接洽，移动时保持原版行走腿。
+
+右键优先级：工作方块（getMenuProvider != null）且玩家与方块之间（水平线段投影 t∈[0,1]、横向距离≤1.5、垂直≤2.5）存在 Enemy → 格挡；否则工作方块正常交互；非工作方块格挡。
+
+跳劈：创造飞行不触发；下落>5格时首次攻击输入被 FallSlamClient 拦截，距地面<=4格自动 startAttack；FallSlamHandler 对命中伤害乘 1+fallDistance*0.05，落地时烈焰粉锻刃迸发 80 颗粒子并播放 parry 音效。
+
+下落跳劈需持续按住攻击键；松开重置 fallStartY 与 pending，必须再次按住重新累计 >5 格。BC 攻击请求到达时 FallSlamHandler.markSlam；LivingFallEvent：有 slam 标记时取消原版摔落，<10格免伤，>10格按 floor((d-10)/3)*3 扣血并 clamp 到 1 HP；正常下落无标记不受影响。
+
+格挡姿态整体接地：groundOffset = 24 - min(leg.y + 12*cos(xRot) - 2*|sin(xRot)|)，随后将 body/head/arms/legs/sleeves/jacket/pants 全部 y += offset，使脚底接触模型地面 y=24。
+
+修复：等待期间 FallSlamState.waitingForSlam=true，BC getCurrentAttack 返回 null，避免按住攻击键每 tick 重播跳劈；首次按下 fallStartY=Y+fallDistance，松手后 afterRelease=true，再按下从当前 Y 起算。
+
+修复重复跳劈：ClientTickEvent.Pre 中提前更新 FallSlamState.waitingForSlam，确保 BC 在玩家 tick 查询攻击时已看到等待标记；自动触发后 triggered 期间继续抑制，直到落地/松手。
+
+重复跳劈修复：ClientPlayerAttackAnimationMixin 拦截 BC AbstractClientPlayer.playAttackAnimation；FallSlamAnimation 手动启动 bettercombat:two_handed_slam，tick 到 endTick/3 后把 attackAnimation.speed.speed 设为 0 冻结；松手 stopAttackAnimation(0.2) 淡出；4 格时按剩余下落时间设置 speed 恢复，使动画落地前完成。
+
+长按判定：FallSlamClient pressTicks>=3 才 longPress，短于 3 tick 松开走 shortTapAttack（allowNormalAttack 让 BC 选普通攻击）；下落期间 startAttack/playAttackAnimation 全过滤；冻结时清空 TransmissionSpeedModifier.gears 并 speed=0，避免 setupAnim 用 gears 覆盖。
+
+底层分析：BC 持键攻击走 Minecraft.continueAttack(Z)（mixin pre_handleBlockBreaking），点击走 startAttack(Z)（pre_doAttack）；动画由 MinecraftClientInject.startUpswing 与 ClientNetwork.handleAttackAnimation 直接调用 playAttackAnimation；TransmissionSpeedModifier.setupAnim 每帧用 gears 覆盖 speed。修复：preTick 建立 pending/longPress；MinecraftContinueAttackMixin 取消 continueAttack；startAttack 检查 waiting；playAttackAnimation 过滤；FallSlamAnimation 冻结时 speed=0 且 gears 清空，1/3 暂停，4格恢复。
+
+自动触发修复：MinecraftFallSlamMixin 仅在不处于 triggeringAttack 时拦 startAttack，确保 4 格自动触发能真正发出攻击；此前 waitingForSlam 连自动触发也拦掉，导致无伤害/无落地逻辑。
+
+语义修正：长按后不屏蔽 BC 连招/音效/刀光（blockAttacks=false），只过滤可见动画；动作冻结在 1/3，4 格时 resumeOriginal 原速恢复；落地 lockTicks=6（0.3s），期间 blockAttacks/attackLock=true，结束后释放；不再用自动 startAttack 触发。
+
+最终语义：长按后 blockAttacks=true，continueAttack/startAttack/playAttackAnimation 全部过滤；1/3 冻结；4 格 resumeOriginal(speed=1) 且 committed=true；committed 后 key release 不取消；落地 lockTicks=6，结束后清 waiting/block。
+
+落地过渡：FallSlamClient 在 onGround 时把 BC 动画 currentTick 设为 endTick（最终帧），再 stopAttackAnimation(0.3) 淡出到 idle；0.3s 锁定内 blockAttacks=true，结束后释放。
+
+修复连招未屏蔽：FallSlamClient.tick 的 lockTicks==0 分支之前每 tick 清空 blockAttacks/waitingForSlam，导致长按期间 BC 连招恢复；现在仅 pending/longPress 都结束时才清空，否则保持 blockAttacks=waiting=true。
+
+最终连招语义：长按后 blockAttacks=false（continueAttack/startAttack 放行，BC 音效/刀光/攻击继续），waitingForSlam=true（仅 playAttackAnimation 过滤，可见动画保持手动 1/3 动画）；4 格 resumeOriginal；落地 finishAndFade(0.3)+lockTicks=6。
+
+动画修复：不再手动调用 playAttackAnimation（参数/资源可能失败导致无动画），改为 allowFirstAnimation 放行 BC 自身第一次跳劈动画，ClientPlayerAttackAnimationMixin 调用 FallSlamAnimation.onExternalStart，tickPause 冻在 1/3；后续 BC 动画过滤，音效/刀光/攻击继续。
+
+动画启动修复：FallSlamAnimation.onExternalStart 手动调用 BC playAttackAnimation("bettercombat:two_handed_slam", TWO_HANDED, length=玩家攻击冷却 tick 数, upswing=0.5)；length 不是秒，之前传 1 导致动画瞬间播完/不可见。ClientPlayerAttackAnimationMixin 只放行该手动调用，BC 自身动画、攻击、音效、刀光全部过滤；1/3 冻结、4 格 resumeOriginal(speed=1)、落地 finishAndFade(0.3)。
+
+硬屏蔽：长按开始发送 FallSlamWindupPayload(true)，服务端 FallSlamHandler.setWindup 调用 BC CombatFlags.setAttacksDisabled(player,true)；落地/取消发 false。客户端 blockAttacks=true，startAttack/continueAttack/playAttackAnimation 全过滤；只有 onExternalStart 手动启动的动画放行。
+
+硬屏蔽补充：ClientNetworkFallSlamMixin 在 waitingForSlam 时取消 BC handleAttackAnimation 与 handleAttackSound；加上 MinecraftFallSlamMixin/MinecraftContinueAttackMixin 与 CombatFlags，形成客户端+服务端全链路屏蔽。仅 FallSlamAnimation.onExternalStart 手动动画不受影响。
