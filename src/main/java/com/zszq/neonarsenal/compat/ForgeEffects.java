@@ -1,7 +1,9 @@
 package com.zszq.neonarsenal.compat;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
@@ -11,10 +13,12 @@ import com.zszq.neonarsenal.item.SharpnessWeaponItem;
 import com.zszq.neonarsenal.item.WeaponCooldowns;
 
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -32,6 +36,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -61,6 +66,7 @@ public final class ForgeEffects {
     private static final int CREEPER_WALK_TICKS = 80;
     private static final int CREEPER_FLASH_TICKS = 28;
     private static final double CREEPER_ATTRACT_RANGE = 6.0D;
+    private static final double CREEPER_ATTRACT_STEP = 0.45D;
 
     private static final int ECHO_COOLDOWN_TICKS = 600;
     private static final int ECHO_FRENZY_TICKS = 160;
@@ -74,6 +80,10 @@ public final class ForgeEffects {
     private static final double RABBIT_SCALE = 4.0D;
     private static final double RABBIT_SEARCH_RANGE = 24.0D;
     private static final double RABBIT_REACH = 2.5D;
+
+    private static final String TAG_FORGE_CREEPER = "bettercombat_neonarsenal_visual_creeper";
+    private static final String TAG_SUMMONED_RABBIT = "bettercombat_neonarsenal_summoned_rabbit";
+    private static final String RABBIT_EXPIRE_KEY = "bettercombat_neonarsenal_expire";
 
     private static final String CD_CHORUS = "chorus";
     private static final String CD_CREEPER = "creeper";
@@ -106,6 +116,7 @@ public final class ForgeEffects {
     private static final class CreeperState {
         private final long walkEnd;
         private final long explodeAt;
+        private final Set<UUID> attracted = new HashSet<>();
         private boolean flashing;
 
         private CreeperState(long walkEnd) {
@@ -222,7 +233,7 @@ public final class ForgeEffects {
         creeper.setPersistenceRequired();
         creeper.setInvulnerable(true);
         creeper.setSwellDir(0);
-        creeper.addTag("bettercombat_neonarsenal_visual_creeper");
+        creeper.addTag(TAG_FORGE_CREEPER);
         level.addFreshEntity(creeper);
         CREEPERS.put(creeper, new CreeperState(now + CREEPER_WALK_TICKS));
     }
@@ -301,8 +312,8 @@ public final class ForgeEffects {
             rabbit.moveTo(x, player.getY(), z, 0.0F, 0.0F);
             rabbit.setPersistenceRequired();
             rabbit.setInvulnerable(true);
-            rabbit.addTag("bettercombat_neonarsenal_summoned_rabbit");
-            rabbit.getPersistentData().putLong("bettercombat_neonarsenal_expire", now + RABBIT_LIFETIME_TICKS);
+            rabbit.addTag(TAG_SUMMONED_RABBIT);
+            rabbit.getPersistentData().putLong(RABBIT_EXPIRE_KEY, now + RABBIT_LIFETIME_TICKS);
             AttributeInstance scale = rabbit.getAttribute(Attributes.SCALE);
             if (scale != null) {
                 scale.setBaseValue(RABBIT_SCALE);
@@ -392,14 +403,23 @@ public final class ForgeEffects {
             return;
         }
         long now = entity.level().getGameTime();
+        if (isForgeSummon(entity)) {
+            // Summons ignore all external damage and knockback; the knockback-resistance attribute
+            // also stops vanilla explosion pushes that bypass a damage event.
+            entity.setInvulnerable(true);
+            AttributeInstance knockbackResistance = entity.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
+            if (knockbackResistance != null) {
+                knockbackResistance.setBaseValue(1.0D);
+            }
+        }
         if (entity instanceof Rabbit rabbit
                 && (RABBIT_MINIONS.containsKey(rabbit)
-                || rabbit.getPersistentData().contains("bettercombat_neonarsenal_expire"))) {
+                || rabbit.getPersistentData().contains(RABBIT_EXPIRE_KEY))) {
             // Expiry is stored on the entity itself so a lost in-memory map can never prevent it.
-            long expire = rabbit.getPersistentData().getLong("bettercombat_neonarsenal_expire");
+            long expire = rabbit.getPersistentData().getLong(RABBIT_EXPIRE_KEY);
             if (expire <= 0L) {
                 expire = now + RABBIT_LIFETIME_TICKS;
-                rabbit.getPersistentData().putLong("bettercombat_neonarsenal_expire", expire);
+                rabbit.getPersistentData().putLong(RABBIT_EXPIRE_KEY, expire);
             }
             if (!rabbit.isAlive()) {
                 RABBIT_MINIONS.remove(rabbit);
@@ -468,7 +488,7 @@ public final class ForgeEffects {
 
     private static boolean isForgeCreeper(LivingEntity entity) {
         return entity instanceof Creeper creeper
-                && (CREEPERS.containsKey(creeper) || creeper.getTags().contains("bettercombat_neonarsenal_visual_creeper"));
+                && (CREEPERS.containsKey(creeper) || creeper.getTags().contains(TAG_FORGE_CREEPER));
     }
 
     private static void tickCreeper(ServerLevel level, Creeper creeper, CreeperState state, long now) {
@@ -488,24 +508,27 @@ public final class ForgeEffects {
             explodeCreeper(level, creeper);
             return;
         }
-        // Attract living mobs within 6 blocks along the walking path.
+        // Strong, locked attraction: mobs acquired once stay locked to this creeper until it
+        // explodes, even if they were pushed out of the 6-block acquisition radius.
+        java.util.Iterator<UUID> locked = state.attracted.iterator();
+        while (locked.hasNext()) {
+            UUID id = locked.next();
+            Entity entity = level.getEntity(id);
+            if (!(entity instanceof LivingEntity mob) || !mob.isAlive()
+                    || mob instanceof Player || isDummy(mob) || isForgeSummon(mob)) {
+                locked.remove();
+                continue;
+            }
+            attract(level, creeper, mob, state);
+        }
+        // Acquire hostile mobs within 6 blocks; only hostiles (dummies and summons excluded).
         for (LivingEntity mob : level.getEntitiesOfClass(LivingEntity.class,
                 creeper.getBoundingBox().inflate(CREEPER_ATTRACT_RANGE),
                 entity -> entity.isAlive() && entity != creeper && !(entity instanceof Player)
-                        && entity != creeper)) {
-            Vec3 direction = new Vec3(creeper.getX() - mob.getX(), 0.0D, creeper.getZ() - mob.getZ());
-            double distance = Math.sqrt(direction.lengthSqr());
-            if (distance < 1.2D || distance < 1.0E-4D) {
-                continue;
-            }
-            double step = Math.min(0.12D, distance - 1.1D);
-            direction = direction.normalize().scale(step);
-            CREEPER_ATTRACTED.put(mob, state.explodeAt);
-            mob.teleportTo(level, mob.getX() + direction.x, mob.getY(), mob.getZ() + direction.z,
-                    java.util.Set.of(), mob.getYRot(), mob.getXRot());
-            if (mob instanceof Mob hostile) {
-                hostile.setTarget(null);
-                hostile.getNavigation().stop();
+                        && isHostile(entity) && !isBoss(entity)
+                        && !isForgeSummon(entity) && !isDummy(entity))) {
+            if (state.attracted.add(mob.getUUID())) {
+                attract(level, creeper, mob, state);
             }
         }
         if (now < state.walkEnd) {
@@ -533,6 +556,33 @@ public final class ForgeEffects {
             creeper.getNavigation().stop();
             creeper.setTarget(null);
             creeper.setSwellDir(1);
+        }
+    }
+
+    /** Pulls one locked mob toward the creeper; far targets are pulled harder so they cannot unlock. */
+    private static void attract(ServerLevel level, Creeper creeper, LivingEntity mob, CreeperState state) {
+        Vec3 direction = new Vec3(creeper.getX() - mob.getX(), 0.0D, creeper.getZ() - mob.getZ());
+        double distance = Math.sqrt(direction.lengthSqr());
+        if (distance < 1.0E-4D) {
+            return;
+        }
+        CREEPER_ATTRACTED.put(mob, state.explodeAt);
+        double step;
+        if (distance > 16.0D) {
+            // Teleport-scale pull for escaped targets: they always catch up again.
+            step = Math.min(distance - 1.0D, 1.2D);
+        } else {
+            step = Math.min(CREEPER_ATTRACT_STEP, distance - 1.0D);
+        }
+        if (step <= 0.0D) {
+            return;
+        }
+        direction = direction.normalize().scale(step);
+        mob.teleportTo(level, mob.getX() + direction.x, mob.getY(), mob.getZ() + direction.z,
+                java.util.Set.of(), mob.getYRot(), mob.getXRot());
+        if (mob instanceof Mob hostile) {
+            hostile.setTarget(null);
+            hostile.getNavigation().stop();
         }
     }
 
@@ -607,13 +657,27 @@ public final class ForgeEffects {
         return best;
     }
 
-    /** Stunned mobs cannot deal damage; summoned rabbits cannot be damaged at all. */
-    public static void onStunDamage(LivingIncomingDamageEvent event) {
-        if (event.getEntity() instanceof Rabbit rabbit && RABBIT_MINIONS.containsKey(rabbit)) {
-            event.setAmount(0.0F);
-            return;
+    /** Summoned creepers/rabbits can never be damaged and never receive knockback. */
+    public static void onKnockback(LivingKnockBackEvent event) {
+        if (isForgeSummon(event.getEntity())) {
+            event.setCanceled(true);
         }
-        if (event.getEntity() instanceof Creeper creeper && isForgeCreeper(creeper)) {
+    }
+
+    private static boolean isSummonedRabbit(LivingEntity entity) {
+        return entity instanceof Rabbit rabbit
+                && (RABBIT_MINIONS.containsKey(rabbit)
+                || rabbit.getTags().contains(TAG_SUMMONED_RABBIT)
+                || rabbit.getPersistentData().contains(RABBIT_EXPIRE_KEY));
+    }
+
+    private static boolean isForgeSummon(LivingEntity entity) {
+        return isSummonedRabbit(entity) || isForgeCreeper(entity);
+    }
+
+    /** Stunned mobs cannot deal damage; summoned rabbits and creepers cannot be damaged at all. */
+    public static void onStunDamage(LivingIncomingDamageEvent event) {
+        if (isForgeSummon(event.getEntity())) {
             event.setAmount(0.0F);
             return;
         }
@@ -628,7 +692,19 @@ public final class ForgeEffects {
     }
 
     private static boolean isHostile(LivingEntity entity) {
+        if (isDummy(entity)) {
+            return false;
+        }
         return entity instanceof Enemy || entity.getType().getCategory() == MobCategory.MONSTER;
+    }
+
+    /** The dummmmmmy target dummy is not a hostile target (never attracted or damaged by forge effects). */
+    private static boolean isDummy(LivingEntity entity) {
+        ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        if (id != null && (id.getNamespace().equals("dummmmmmy") || id.getPath().contains("dummy"))) {
+            return true;
+        }
+        return entity.getClass().getName().contains("dummmmmmy");
     }
 
     private static boolean isBoss(LivingEntity entity) {

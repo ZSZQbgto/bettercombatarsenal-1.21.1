@@ -1,0 +1,75 @@
+{
+  "parent": "builtin/entity",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:weapon/spear"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        15.5,
+        2
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        15.5,
+        2
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        90,
+        -20
+      ],
+      "translation": [
+        0,
+        0,
+        6
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        90,
+        -20
+      ],
+      "translation": [
+        0,
+        0,
+        6
+      ]
+    },
+    "ground": {
+      "translation": [
+        0,
+        20.5,
+        0
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        45
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ]
+    }
+  }
+}

@@ -38,5 +38,8 @@
   "tooltip.bettercombat_neonarsenal.forge.rabbit.held": "Passive: +5% attack speed, +150% jump height, +100% jump-slam damage",
   "tooltip.bettercombat_neonarsenal.forge.rabbit.effect": "Effect: summons 4 thunder rabbits around you; every 0.5 s they hit up to 3 targets for 4 damage each and vanish after 10 s. Cooldown: 30 s.",
   "tooltip.bettercombat_neonarsenal.forge.echo.held": "Passive: -50% attack speed, +100% damage",
-  "tooltip.bettercombat_neonarsenal.forge.echo.effect": "Effect: hostile mobs within 8 blocks fight each other for 8 s. Cooldown: 30 s."
+  "tooltip.bettercombat_neonarsenal.forge.echo.effect": "Effect: hostile mobs within 8 blocks fight each other for 8 s. Cooldown: 30 s.",
+  "item.bettercombat_neonarsenal.spear": "Spear",
+  "tooltip.bettercombat_neonarsenal.forge_colour": "Forge colour: #%s",
+  "subtitles.bettercombat_neonarsenal.parry": "Parry"
 }

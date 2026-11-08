@@ -59,6 +59,26 @@ public final class WeaponGlow {
                     .setWriteMaskState(RenderStateShard.COLOR_WRITE)
                     .createCompositeState(false));
 
+    /** Plain translucent overlay: same vertex format/polygon offset as the glow, but normal blending
+     *  (used for the non-glowing blade tint from forge layers/dye). */
+    private static final RenderType TINT_LAYER = RenderType.create(
+            "bettercombat_neonarsenal_blade_tint",
+            DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP,
+            VertexFormat.Mode.QUADS,
+            1536,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.POSITION_COLOR_TEX_LIGHTMAP_SHADER)
+                    .setTextureState(RenderStateShard.BLOCK_SHEET)
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setLightmapState(RenderStateShard.LIGHTMAP)
+                    .setLayeringState(RenderStateShard.POLYGON_OFFSET_LAYERING)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false));
+
     /** Self-lit overlay layer handled by Iris shader packs; binds the item atlas explicitly. */
     private static final RenderType EMISSIVE_LAYER =
             RenderType.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS);
@@ -126,7 +146,7 @@ public final class WeaponGlow {
      * top and depth-compares equal.
      */
     public static void render(ItemStack stack, ResourceLocation itemId, ItemDisplayContext context,
-                              PoseStack poseStack, MultiBufferSource buffers) {
+                              PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
         if (stack.isEmpty()) {
             return;
         }
@@ -143,21 +163,31 @@ public final class WeaponGlow {
             return;
         }
 
+        // Forged layers and dye tint the blade even before a glow ink sac is forged: draw the
+        // blade mask as a plain translucent colour overlay instead of the self-lit glow.
+        boolean hasColour = com.zszq.neonarsenal.item.Forge.dyeColor(stack) >= 0
+                || !com.zszq.neonarsenal.item.Forge.layers(stack).isEmpty();
+        if (!com.zszq.neonarsenal.item.Forge.glowEnabled(stack) && hasColour) {
+            // Reuse the glow overlay model and its polygon-offset positioning, but blend normally
+            // and use the world light so the tint does not glow.
+            VertexConsumer tintBuffer = buffers.getBuffer(TINT_LAYER);
+            float[] tint = forgeTint(stack, config);
+            for (Direction direction : Direction.values()) {
+                writeQuadsWithLight(tintBuffer, poseStack.last(),
+                        overlay.getQuads(null, direction, RANDOM), tint, 0.75F, packedLight);
+            }
+            writeQuadsWithLight(tintBuffer, poseStack.last(),
+                    overlay.getQuads(null, null, RANDOM), tint, 0.75F, packedLight);
+        }
+
+        if (!config.enabled) {
+            return;
+        }
+
         float sharpnessFactor = com.zszq.neonarsenal.item.Sharpness.glowFactor(stack);
         if (config.glow.enabled && config.glow.alpha > 0.0F && sharpnessFactor > 0.0F
                 && com.zszq.neonarsenal.item.Forge.glowEnabled(stack)) {
-            float[] tint = config.tintColor();
-            int dye = com.zszq.neonarsenal.item.Forge.dyeColor(stack);
-            if (dye >= 0) {
-                tint = new float[]{((dye >> 16) & 0xFF) / 255.0F,
-                        ((dye >> 8) & 0xFF) / 255.0F,
-                        (dye & 0xFF) / 255.0F};
-            } else if (!com.zszq.neonarsenal.item.Forge.layers(stack).isEmpty()) {
-                int forgeColor = com.zszq.neonarsenal.item.Forge.color(stack);
-                tint = new float[]{((forgeColor >> 16) & 0xFF) / 255.0F,
-                        ((forgeColor >> 8) & 0xFF) / 255.0F,
-                        (forgeColor & 0xFF) / 255.0F};
-            }
+            float[] tint = forgeTint(stack, config);
             float alpha = config.glow.alpha * sharpnessFactor
                     * (float) com.zszq.neonarsenal.config.NeonArsenalConfig.bladeGlowIntensity();
             if (context.firstPerson() && shaderPackActive()) {
@@ -176,6 +206,23 @@ public final class WeaponGlow {
             // in display contexts (ground, item frames, shelves, ...).
             WeaponTrailFx.captureBlade(overlay, context, poseStack, stack);
         }
+    }
+
+    /** Dye first, then the mixed forge-layer colour, then the configured default tint. */
+    private static float[] forgeTint(ItemStack stack, WeaponGlowConfig config) {
+        float[] tint = config.tintColor();
+        int dye = com.zszq.neonarsenal.item.Forge.dyeColor(stack);
+        if (dye >= 0) {
+            tint = new float[]{((dye >> 16) & 0xFF) / 255.0F,
+                    ((dye >> 8) & 0xFF) / 255.0F,
+                    (dye & 0xFF) / 255.0F};
+        } else if (!com.zszq.neonarsenal.item.Forge.layers(stack).isEmpty()) {
+            int forgeColor = com.zszq.neonarsenal.item.Forge.color(stack);
+            tint = new float[]{((forgeColor >> 16) & 0xFF) / 255.0F,
+                    ((forgeColor >> 8) & 0xFF) / 255.0F,
+                    (forgeColor & 0xFF) / 255.0F};
+        }
+        return tint;
     }
 
     private static void drawOverlay(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
@@ -245,6 +292,15 @@ public final class WeaponGlow {
             return Boolean.TRUE.equals(result);
         } catch (Throwable ignored) {
             return false;
+        }
+    }
+
+    /** Same as {@link #writeQuads} but samples the given packed light instead of full-bright. */
+    private static void writeQuadsWithLight(VertexConsumer buffer, PoseStack.Pose pose, java.util.List<BakedQuad> quads,
+                                            float[] tint, float alpha, int packedLight) {
+        for (BakedQuad quad : quads) {
+            buffer.putBulkData(pose, quad, tint[0], tint[1], tint[2], alpha,
+                    packedLight, OverlayTexture.NO_OVERLAY);
         }
     }
 

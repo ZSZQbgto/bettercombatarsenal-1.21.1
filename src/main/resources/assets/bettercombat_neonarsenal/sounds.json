@@ -1,0 +1,11 @@
+{
+  "parry": {
+    "subtitle": "subtitles.bettercombat_neonarsenal.parry",
+    "sounds": [
+      {
+        "name": "bettercombat_neonarsenal:parry",
+        "stream": false
+      }
+    ]
+  }
+}

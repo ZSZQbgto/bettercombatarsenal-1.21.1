@@ -24,7 +24,7 @@ public final class JumpAttackKnockback {
         if (!(event.getSource().getDirectEntity() instanceof Player player)) {
             return;
         }
-        if (player.onGround()) {
+        if (!JumpAttackHandler.isJumpAttackAirborne(player)) {
             return;
         }
         ItemStack weapon = player.getMainHandItem();

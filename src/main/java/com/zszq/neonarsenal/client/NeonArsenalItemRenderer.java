@@ -81,7 +81,7 @@ public final class NeonArsenalItemRenderer extends BlockEntityWithoutLevelRender
         // The supplied "<id>_blade" masks are drawn as a full-bright overlay on top of the base
         // model, so only the authored blade pixels glow. The GUI keeps using the plain 2D icon.
         if (!thumbnail) {
-            WeaponGlow.render(stack, itemId, displayContext, poseStack, bufferSource);
+            WeaponGlow.render(stack, itemId, displayContext, poseStack, bufferSource, packedLight);
         }
     }
 }

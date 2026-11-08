@@ -1,0 +1,8 @@
+{
+  "loader": "bettercombat_neonarsenal:permissive_model",
+  "source": "bettercombat_neonarsenal:geometry/spear",
+  "textures": {
+    "0": "bettercombat_neonarsenal:blade/spear_blade",
+    "particle": "bettercombat_neonarsenal:blade/spear_blade"
+  }
+}

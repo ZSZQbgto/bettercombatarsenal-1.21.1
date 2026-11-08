@@ -21,6 +21,10 @@ public final class ModParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GLOW_SPARK =
             PARTICLE_TYPES.register("glow_spark", () -> new SimpleParticleType(true));
 
+    /** Block-spark burst carrying the weapon's particle colour and glow flag. */
+    public static final DeferredHolder<ParticleType<?>, BlockSparkParticleType> BLOCK_SPARK =
+            PARTICLE_TYPES.register("block_spark", BlockSparkParticleType::new);
+
     /** Animated end-rod twinkle, warm white. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GLOW_GLITTER =
             PARTICLE_TYPES.register("glow_glitter", () -> new SimpleParticleType(true));

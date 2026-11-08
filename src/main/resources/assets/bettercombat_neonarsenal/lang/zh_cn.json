@@ -38,5 +38,8 @@
   "tooltip.bettercombat_neonarsenal.forge.rabbit.held": "持有：攻速 +5%、跳跃高度 +150%、跃斩增伤 +100%",
   "tooltip.bettercombat_neonarsenal.forge.rabbit.effect": "效果：在你周围召唤 4 只雷霆大兔子，每 0.5 秒攻击 3 个目标，每次造成 4 伤害，10 秒后兔子消失，效果冷却 30 秒",
   "tooltip.bettercombat_neonarsenal.forge.echo.held": "持有：攻速 -50%、伤害 +100%",
-  "tooltip.bettercombat_neonarsenal.forge.echo.effect": "效果：你周围8 格内的敌对生物进入8秒的互相攻击，效果冷却 30 秒"
+  "tooltip.bettercombat_neonarsenal.forge.echo.effect": "效果：你周围8 格内的敌对生物进入8秒的互相攻击，效果冷却 30 秒",
+  "item.bettercombat_neonarsenal.spear": "长枪",
+  "tooltip.bettercombat_neonarsenal.forge_colour": "锻刃颜色: #%s",
+  "subtitles.bettercombat_neonarsenal.parry": "格挡"
 }

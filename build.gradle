@@ -50,7 +50,19 @@ neoForge {
     // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
 
     // Default run configurations.
-    // These can be tweaked, removed, or duplicated as needed.
+    // The dedicated server runs from its own game directory (run-server), so only server-compatible
+// mods are copied there; client-only mods in run/mods (Sodium, Iris, JEI, ...) would crash it.
+tasks.register('prepareServerMods', Copy) {
+    from('run/mods') {
+        include 'bettercombat-*.jar', 'cloth-config-*.jar', 'player-animation-lib-*.jar'
+    }
+    into 'run-server/mods'
+}
+tasks.matching { it.name == 'runServer' }.configureEach {
+    dependsOn 'prepareServerMods'
+}
+
+// These can be tweaked, removed, or duplicated as needed.
     runs {
         client {
             client()
@@ -61,6 +73,9 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
+            // Keep the dedicated server in its own game directory: run/mods contains client-only
+            // mods (Sodium/Iris/JEI/...) that crash the dedicated server during early bootstrap.
+            gameDirectory.set(layout.projectDirectory.dir('run-server'))
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 

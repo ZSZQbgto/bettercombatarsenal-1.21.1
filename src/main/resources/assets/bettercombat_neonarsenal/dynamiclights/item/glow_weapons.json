@@ -1,0 +1,17 @@
+{
+  "match": {
+    "items": [
+      "bettercombat_neonarsenal:sword",
+      "bettercombat_neonarsenal:claymore",
+      "bettercombat_neonarsenal:doubleaxe",
+      "bettercombat_neonarsenal:twinblade",
+      "bettercombat_neonarsenal:hengdao",
+      "bettercombat_neonarsenal:rapier",
+      "bettercombat_neonarsenal:spear"
+    ],
+    "components": {
+      "bettercombat_neonarsenal:glow_forge": 1
+    }
+  },
+  "luminance": 7
+}

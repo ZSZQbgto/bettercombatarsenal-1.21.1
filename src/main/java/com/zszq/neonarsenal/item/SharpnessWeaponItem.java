@@ -10,6 +10,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.level.Level;
 
 /**
  * A non-damageable arsenal weapon: no durability, never breaks, and carries a sharpness index plus
@@ -37,6 +43,32 @@ public class SharpnessWeaponItem extends Item {
     }
 
     @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand usedHand) {
+        if (usedHand == InteractionHand.MAIN_HAND) {
+            // Blocking has priority over item/attack/switch cooldowns: clear any item cooldown.
+            player.getCooldowns().removeCooldown(this);
+            // Blocking cannot be combined with sprinting: interrupt an active sprint immediately.
+            if (player.isSprinting()) {
+                player.setSprinting(false);
+            }
+            player.startUsingItem(usedHand);
+            return InteractionResultHolder.consume(player.getItemInHand(usedHand));
+        }
+        return super.use(level, player, usedHand);
+    }
+
+    @Override
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
+        return 72000;
+    }
+
+    @Override
+    public UseAnim getUseAnimation(ItemStack stack) {
+        return UseAnim.BLOCK;
+    }
+
+    /** Allow placing arsenal weapons in a grindstone (used for the forging wipe). */
+    @Override
     public boolean canGrindstoneRepair(ItemStack stack) {
         return true;
     }
@@ -59,6 +91,10 @@ public class SharpnessWeaponItem extends Item {
         if (dye >= 0) {
             tooltip.add(Component.translatable(PREFIX + "dye", String.format("%06X", dye))
                     .withStyle(style -> style.withColor(dye)));
+        } else if (!Forge.layers(stack).isEmpty()) {
+            int colour = Forge.displayColor(stack) & 0xFFFFFF;
+            tooltip.add(Component.translatable(PREFIX + "forge_colour", String.format("%06X", colour))
+                    .withStyle(style -> style.withColor(colour)));
         }
         List<String> layers = Forge.layers(stack);
         if (layers.isEmpty()) {

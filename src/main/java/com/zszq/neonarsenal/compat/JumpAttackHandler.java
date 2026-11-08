@@ -12,6 +12,7 @@ import com.zszq.neonarsenal.weapon.WeaponCatalog;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
@@ -66,8 +67,9 @@ public final class JumpAttackHandler {
     /** Wall-clock time (ms) until which jumping is blocked after a jump attack (first cooldown half). */
     private static final Map<UUID, Long> JUMP_BLOCK_UNTIL = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Wall-clock time (ms) of each player's last actual jump, used to recognise jump attacks. */
-    private static final Map<UUID, Long> LAST_JUMP_MS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Players that have jumped and have not landed yet; jump attacks are allowed for this whole window. */
+    private static final java.util.Set<UUID> JUMP_AIRBORNE =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private static Method attackCooldownMethod;
 
@@ -87,12 +89,14 @@ public final class JumpAttackHandler {
         if (player == null || player.onGround()) {
             return null;
         }
-        // Strict rule: the player must have jumped first, and the attack must happen while rising
-        // or at the apex. Attacking after the apex (already falling) is a normal attack.
-        if (!jumpedRecently(player)) {
+        // Vanilla-style airborne attack conditions: any time between jumping and landing counts,
+        // including while falling. Climbing, swimming, riding and blindness are excluded just like
+        // vanilla critical hits.
+        if (!isJumpAttackAirborne(player)) {
             return null;
         }
-        if (player.getDeltaMovement().y < 0.0D) {
+        if (player.onClimbable() || player.isInWater() || player.isPassenger()
+                || player.hasEffect(MobEffects.BLINDNESS)) {
             return null;
         }
         // Only actual attack input may turn into a jump attack. Better Combat also queries the
@@ -205,13 +209,21 @@ public final class JumpAttackHandler {
      */
     public static void onLivingJump(net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player) {
-            LAST_JUMP_MS.put(player.getUUID(), System.currentTimeMillis());
+            JUMP_AIRBORNE.add(player.getUUID());
         }
     }
 
-    private static boolean jumpedRecently(Player player) {
-        Long lastJump = LAST_JUMP_MS.get(player.getUUID());
-        return lastJump != null && System.currentTimeMillis() - lastJump <= 1500L;
+    /** Clears the jump window once the player is back on the ground. */
+    public static void onPlayerTick(net.neoforged.neoforge.event.tick.PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (player.onGround()) {
+            JUMP_AIRBORNE.remove(player.getUUID());
+        }
+    }
+
+    /** {@return true from a real jump until landing (vanilla-style airborne attack window)}. */
+    public static boolean isJumpAttackAirborne(Player player) {
+        return player != null && !player.onGround() && JUMP_AIRBORNE.contains(player.getUUID());
     }
 
     /**
@@ -224,7 +236,7 @@ public final class JumpAttackHandler {
         if (player == null) {
             return;
         }
-        if (!jumpedRecently(player)) {
+        if (!isJumpAttackAirborne(player)) {
             return;
         }
         init();

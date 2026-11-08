@@ -6,10 +6,14 @@
   "plugin": "com.zszq.neonarsenal.mixin.NeonArsenalMixinPlugin",
   "mixins": [
     "bettercombat.PlayerAttackHelperMixin",
-    "bettercombat.SlashParticleUtilMixin"
+    "bettercombat.SlashParticleUtilMixin",
+    "AnvilMenuFreeRepairMixin",
+    "CreeperExplosionMixin"
   ],
   "client": [
-    "LivingEntityJumpMixin"
+    "LivingEntityJumpMixin",
+    "PlayerBlockPoseMixin",
+    "ClientLevelParrySoundMixin"
   ],
   "injectors": {
     "defaultRequire": 1

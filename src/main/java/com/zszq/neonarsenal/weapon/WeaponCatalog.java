@@ -58,6 +58,12 @@ public final class WeaponCatalog {
                     .attackDamage(2.0F)
                     .attackSpeed(-1.8F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
+                    .build(),
+            WeaponDefinition.builder("spear")
+                    .tier(Tiers.IRON)
+                    .attackDamage(6.2F)
+                    .attackSpeed(-2.8F)
+                    .betterCombatPreset(NeonArsenalPresets.SPEAR)
                     .build());
 
     private static final Map<String, WeaponDefinition> BY_ID;

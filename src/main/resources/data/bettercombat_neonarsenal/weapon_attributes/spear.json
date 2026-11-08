@@ -1,0 +1,50 @@
+{
+  "attributes": {
+    "attack_range": 0.0,
+    "range_bonus": 1.0,
+    "two_handed": true,
+    "pose": "bettercombat:pose_two_handed_polearm",
+    "category": "spear",
+    "trail_appearance": {
+      "default_appearance": {
+        "primary": {
+          "color_rgba": 4294967193,
+          "glows": false
+        },
+        "secondary": {
+          "color_rgba": 2576980326,
+          "glows": false
+        }
+      },
+      "conditional": {
+        "is_enchanted": {
+          "primary": {
+            "color_rgba": 1725562777,
+            "glows": false
+          },
+          "secondary": {
+            "color_rgba": 2582052684,
+            "glows": false
+          }
+        }
+      }
+    },
+    "attacks": [
+      {
+        "hitbox": "FORWARD_BOX",
+        "damage_multiplier": 1.0,
+        "movement_speed_multiplier": 1.0,
+        "range_multiplier": 1.0,
+        "angle": 0.0,
+        "upswing": 0.5,
+        "animation": "bettercombat:two_handed_stab_right",
+        "swing_sound": {
+          "id": "bettercombat:spear_stab",
+          "volume": 1.0,
+          "pitch": 1.0,
+          "randomness": 0.1
+        }
+      }
+    ]
+  }
+}

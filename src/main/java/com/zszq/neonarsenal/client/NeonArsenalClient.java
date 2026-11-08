@@ -51,6 +51,8 @@ public final class NeonArsenalClient {
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.addListener(this::clientTick);
         NeoForge.EVENT_BUS.addListener(FirstPersonGlowPass::render);
+        NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onRenderHand);
+        NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onCameraAngles);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
@@ -59,6 +61,16 @@ public final class NeonArsenalClient {
 
     private void clientTick(ClientTickEvent.Post event) {
         WeaponTrailFx.tick(Minecraft.getInstance());
+        com.zszq.neonarsenal.client.fx.BlockShakeEffects.tick();
+        if (Minecraft.getInstance().player != null
+                && com.zszq.neonarsenal.client.BlockPose.isBlocking(Minecraft.getInstance().player)) {
+            // Blocked hits should not flash the player red.
+            Minecraft.getInstance().player.hurtTime = 0;
+            Minecraft.getInstance().player.hurtDuration = 0;
+            if (Minecraft.getInstance().player.isSprinting()) {
+                Minecraft.getInstance().player.setSprinting(false);
+            }
+        }
         if (++configCheckTicks >= 20) {
             configCheckTicks = 0;
             WeaponGlowConfig.reloadIfChanged();
@@ -68,6 +80,8 @@ public final class NeonArsenalClient {
     private void registerParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ModParticles.GLOW_SPARK.get(),
                 sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 1.0F));
+        event.registerSpriteSet(ModParticles.BLOCK_SPARK.get(),
+                sprites -> new com.zszq.neonarsenal.client.fx.BlockSparkParticle.Provider(sprites));
         event.registerSpriteSet(ModParticles.GLOW_GLITTER.get(),
                 sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 0.85F));
         event.registerSpriteSet(ModParticles.GLOW_SPARKLE.get(),

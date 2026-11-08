@@ -41,6 +41,7 @@ public final class NeonArsenal {
         ModItems.ITEMS.register(modEventBus);
         com.zszq.neonarsenal.registry.ModDataComponents.DATA_COMPONENTS.register(modEventBus);
         ModParticles.PARTICLE_TYPES.register(modEventBus);
+        com.zszq.neonarsenal.registry.ModSounds.SOUND_EVENTS.register(modEventBus);
         ModCreativeTabs.TABS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
@@ -59,15 +60,29 @@ public final class NeonArsenal {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.ForgeEffects::onStunDamage);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.ForgeEffects::onKnockback);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.ForgeEffects::onLivingTick);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.ForgeEffects::onPlayerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.BlockHandler::onIncomingDamage);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.BlockHandler::onPlayerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.BlockHandler::onRightClickBlock);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.BlockHandler::onAttackEntity);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.BlockHandler::onLeftClickBlock);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.ForgeEffects::onLivingJump);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.JumpAttackKnockback::onIncomingDamage);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.JumpAttackHandler::onLivingJump);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.JumpAttackHandler::onPlayerTick);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

@@ -1,0 +1,46 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"dualwieldparry": {
+			"loop": true,
+			"bones": {
+				"torso": {
+					"rotation": [15, 0, 0],
+					"position": [0, -1, -1]
+				},
+				"torso_bend": {
+					"rotation": [5, 0, 0]
+				},
+				"head": {
+					"rotation": [10.0093, 2.462, 0.4344],
+					"position": [0, -1, -1]
+				},
+				"right_arm": {
+					"rotation": [-33.0267, -12.3358, 42.6998],
+					"position": [0, -1, 0]
+				},
+				"right_arm_bend": {
+					"rotation": [-35.0256, -2.0477, 1.4346]
+				},
+				"left_arm": {
+					"rotation": [-70.1484, -5.1698, -87.6911],
+					"position": [0, -1, 0]
+				},
+				"left_arm_bend": {
+					"rotation": [-7.5, 0, 0]
+				},
+				"right_leg": {
+					"rotation": [32.5, 0, 0],
+					"position": [0, -1, 2]
+				},
+				"left_leg": {
+					"rotation": [-30, 0, 0],
+					"position": [0, -1, 2]
+				},
+				"left_leg_bend": {
+					"rotation": [42.5, 0, 0]
+				}
+			}
+		}
+	}
+}
