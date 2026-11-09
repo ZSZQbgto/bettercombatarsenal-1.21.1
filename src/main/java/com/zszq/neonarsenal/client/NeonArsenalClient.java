@@ -51,6 +51,8 @@ public final class NeonArsenalClient {
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.addListener(this::clientTick);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.FallSlamClient::preTick);
+        NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.ChargeThrustClient::preTick);
+        NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.ChargeThrustClient::tick);
         NeoForge.EVENT_BUS.addListener(FirstPersonGlowPass::render);
         NeoForge.EVENT_BUS.addListener(NeonArsenalClient::onItemTooltip);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onRenderHand);
@@ -82,6 +84,7 @@ public final class NeonArsenalClient {
 
     private void clientTick(ClientTickEvent.Post event) {
         WeaponTrailFx.tick(Minecraft.getInstance());
+        com.zszq.neonarsenal.client.fx.TrailFollow.tick();
         com.zszq.neonarsenal.client.fx.BlockShakeEffects.tick();
         com.zszq.neonarsenal.client.FallSlamClient.tick();
         if (Minecraft.getInstance().player != null
@@ -127,6 +130,9 @@ public final class NeonArsenalClient {
             event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_fx")));
             if (hasModel(weapon.id() + "_thumbnail")) {
                 event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_thumbnail")));
+            }
+            if (hasModel(weapon.id() + "_fpparry")) {
+                event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_fpparry")));
             }
         }
     }

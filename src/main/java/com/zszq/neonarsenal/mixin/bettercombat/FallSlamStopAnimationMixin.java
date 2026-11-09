@@ -34,6 +34,11 @@ public class FallSlamStopAnimationMixin {
         }
         if (FallSlamAnimation.isControlling() && !FallSlamAnimation.isAllowingStop()) {
             ci.cancel();
+            return;
+        }
+        if (com.zszq.neonarsenal.client.ChargeThrustAnimation.isControlling()
+                && !com.zszq.neonarsenal.client.ChargeThrustAnimation.isAllowingStop()) {
+            ci.cancel();
         }
     }
 }

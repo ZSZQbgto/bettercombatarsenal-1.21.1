@@ -93,8 +93,10 @@
 - 格挡 **2 秒内**松开不打断连招；超过 2 秒再松开则打断连招。
 - 宽窄皮肤均适配；格挡时袖子、外套、裤腿与**头部外层**（含 3D 皮肤层的 3D 网格）都会跟随动作；**格挡静止时全身只比移动格挡略低约 1 像素**（头部与身体一起下移）。
 - **骑马 / 坐船 / 坐矿车等坐姿格挡时**，下半身保持原版坐姿（不套用动画文件的站姿腿），只有上半身进入格挡姿态，整体保持乘坐高度。
+- **骑乘活体坐骑**（马、驴、骆驼等）行走/奔跑时，角色会随坐骑步态轻微上下起伏（幅度约 1 像素，速度越快越明显），武器与披风等一起跟随；船/矿车不应用。
 - **穿戴鞘翅格挡时**，鞘翅会收拢为潜行时的姿态，并跟随躯干/肩膀一起运动，不会与身体分离。
 - **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
+- **第一人称格挡**：格挡时武器切换到设计好的第一人称格挡姿态（_fpparry 模型的第一人称 display 变换），松开后平滑回到普通持握。
 
 ## 武器
 
@@ -107,7 +109,7 @@
 | 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | ✓ | ✓ | ✓ | ✓ | 双手拔刀斩 |
 | 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | ✓ | ✓ | — | — | 单手快刺 |
 | 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | 单手短刃，纯输出 |
-| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | 双手，+1 距离 |
+| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | 双手，+1 距离，**冲锋前刺** |
 
 ### 8. 附魔
 
@@ -119,9 +121,21 @@
 - **附魔视觉效果**：未锻入**发光墨囊**时无效果；锻入后刀刃发光不再是单一颜色，而是**中等速度的流光**——颜色沿刀刃在武器当前颜色环（染料/锻刃混色）附近动态流动；未染色时表现为明暗流光。
 - **不显示原版附魔光效**：附魔武器不会出现原版附魔闪烁，只保留本模组自己的刀刃发光/流光。
 - **Tooltip**：默认只显示**数值加成**，且统一为百分比：锋利/亡灵杀手/节肢杀手/火焰附加折算为**相对武器基础攻击伤害的百分比**（锋利与锻刃伤害百分比合并为一行），耐久/横扫本身即百分比；击退/抢夺/经验修补保留原版文字数值。按住 **Shift** 查看附魔名称与效果明细、综合性能与锻刃说明。
+- **经验修补（Mending）**：附在本模组武器上时不再修耐久（武器无耐久），改为**每 1 点经验恢复 20 点锋利度**（消耗对应经验，优先主手、其次副手；锋利度已满时经验正常获得，多余经验仍会正常进账/修其它带经验修补的装备）。
+
+### 9. 冲锋前刺（骑乘长枪）
+
+- **条件**：主手持长枪（`CHARGE_THRUST` 技能），且正在**骑乘活体坐骑**（鞘翅滑行不触发）。
+- **短点击左键**：触发一次普通长枪前刺攻击（与普通攻击一致）。
+- **长按左键**：0.15 秒后进入蓄力，播放长枪前刺动作并**冻结在动画 1/3 处**；蓄力期间服务器每 tick 扫描玩家移动路径上位于攻击方向锥形范围内的所有生物并结算冲锋伤害；**松开**后继续播完整段前刺动画、动画结束后 0.3 秒淡出，并对松开瞬间前方未被命中的生物补一次前刺。
+- **冲锋伤害**：按“攻击者与目标速度差沿攻击方向的投影”计算，阈值 **≥ 4.6 格/秒**才会造成冲锋伤害；伤害 = 武器攻击力 × 倍率，倍率 = 1 + (相对速度 − 4.6) × 0.15，上限 4×。迎面冲刺倍率最大、同向追击倍率低、侧向接近 90° 贡献接近 0。低于阈值的一次接触不结算伤害（之后更快经过仍可命中）。
+- 命中时按现有粒子/声音规则：武器锻入烈焰粉时迸发武器色火星，播放长枪刺击音效，并把目标沿攻击方向击退。
+- 蓄力期间屏蔽普通攻击与挖掘，服务器侧同时关闭 Better Combat 攻击通道（10 秒安全兜底，客户端松手/中断会立即恢复）。
+- **BC 刀光跟随玩家**：只让 Better Combat 自己生成的挥砍刀光粒子随施放者移动（高速骑乘时不再相对地面静止）；本模组生成的粒子（火星、格挡迸发等）保持原样，不做任何修改。
 
 ## 工艺速查
 
+- **持刀动作**：单持**长剑 / 阔剑 / 双刃剑 / 双刃斧 / 横刀 / 刺剑 / 长枪**时，主手使用设计好的持刀动作（`animations/weapon_holding_action_from_behind.json`，含手臂与肘弯），静止与移动都保持该设计动作；武器位置与朝向保持原版渲染不变；移动时只叠加微量前后摆动：行走中轴后 5°、扇面 4°，疾跑中轴后 10°、扇面 8°，静止时无摆动。与攻击招式之间平滑过渡（出招时淡出、收招后淡入），**双持时副手保持原有动作不变**（匕首保持原持刀动作）。
 - **冷却跟武器走**：存在物品上按游戏时间计算，丢弃、换手、重进都不刷新。
 - **双持**：锻刃与锋利度只由主手攻击触发；副手砍人不触发、不消耗；两手外观各自独立。
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
@@ -232,8 +246,10 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - Releasing within **2 s** keeps the combo; blocking longer than 2 s and releasing breaks the combo.
 - Slim and wide skins both fit; sleeves and jacket follow the block pose; **while blocking stationary the whole figure sits only about 1 px lower than the moving block pose** (head and body move together).
 - **Blocking while riding (horse, boat, minecart, ...)**: the lower body keeps the vanilla seated pose and the model keeps the seat height; only the upper body enters the block pose.
+- **While riding a living mount** (horse, donkey, camel, ...) the rider heaves subtly with the mount's gait (about one pixel, stronger at higher speed); the weapon and layers follow. Boats and minecarts are unaffected.
 - **Blocking with an elytra equipped** folds the wings into the sneaking elytra pose and keeps them attached to the posed torso/shoulders instead of floating apart.
 - **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking.
+- **First-person parry**: while blocking, the weapon switches to the authored first-person parry pose (the `_fpparry` model's first-person display transform) with a **0.18 s smoothstep** blend to and from the normal grip; a successful block bursts the same weapon-coloured sparks as third person (14 particles, glowing when glow ink was forged) at the first-person weapon position.
 
 ### 8. Enchantments
 
@@ -245,6 +261,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - **Visual effect**: no glow ink sac → no effect; with it the blade glow is no longer a single colour but a **medium-speed flowing light** whose colours travel along the blade near the weapon's current colour-ring colour (dye/forge mix); an uncoloured blade shows a brightness flow.
 - **No vanilla enchantment glint**: enchanted arsenal weapons never show the vanilla foil effect; only the mod's own blade glow/flow is used.
 - **Tooltip**: by default only the **numeric bonuses**, uniformly as percentages: Sharpness/Smite/Bane of Arthropods/Fire Aspect are converted to **percentages of the weapon's base attack damage** (sharpness is merged into the forge damage percentage line), while Unbreaking/Sweeping Edge are percentages already; Knockback/Looting/Mending keep their vanilla value text. Hold **Shift** for enchantment names and effect details, total stats and forge descriptions.
+- **Mending** on an arsenal weapon restores **sharpness** instead of durability (the weapons are unbreakable): **1 experience point restores 20 sharpness** (that experience is consumed; the main hand is repaired first, then the off hand). When the held weapon is already full, experience is gained normally, and leftover experience still repairs other Mending gear.
 
 ## Weapons
 
@@ -257,10 +274,21 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 | Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | ✓ | ✓ | ✓ | ✓ | Two-handed draw slashes |
 | Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | ✓ | ✓ | — | — | One-handed fast thrusts |
 | Dagger | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | One-handed short blade, pure damage |
-| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | Two-handed, +1 reach |
+| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | Two-handed, +1 reach, **charge thrust** |
+
+### 9. Charge thrust (mounted spear)
+
+- **Condition**: the main hand holds the spear (`CHARGE_THRUST` skill) and the player is **riding a living mount** (elytra gliding does not trigger it).
+- **Short click**: one ordinary spear thrust attack (identical to a normal attack).
+- **Hold**: after 0.15 s the charge starts — the spear thrust animation plays and is **frozen at one third** of its length. While charging, the server sweeps every creature along the player's movement inside the forward attack cone each tick and settles charge damage. **Releasing** resumes the whole thrust animation (fading out over 0.3 s once finished) and applies one more strike to creatures in front that were not hit yet.
+- **Charge damage**: uses the attacker/target relative velocity projected onto the attack direction; charge damage only applies at **≥ 4.6 blocks/second**. Damage = weapon attack damage × multiplier where multiplier = 1 + (relative speed − 4.6) × 0.15, capped at 4×. Head-on runs hurt the most, chasing a fleeing target gives a low bonus, and moving sideways (about 90°) contributes almost nothing. A contact below the threshold deals no damage (a later faster pass can still hit).
+- Hits use the existing particle/sound rules: weapon-coloured sparks when blaze powder was forged, the spear stab sound, and knockback along the attack direction.
+- Normal attacks and mining are suppressed while charging, and Better Combat's attack channel is disabled server-side (10 s failsafe; released/aborted charges restore it immediately).
+- **Better Combat's slash trail follows the player**: only Better Combat's own slash-trail particles are dragged along with their caster (so the trail no longer hangs still in the air while riding fast); particles generated by this mod (sparks, block burst, ...) are left completely untouched.
 
 ## Quick reference
 
+- **Holding animation**: when single-wielding the **Longsword / Broadsword / Double-Edged Sword / Double-Bladed Axe / Hengdao / Rapier / Spear**, the main hand uses the authored holding action (`animations/weapon_holding_action_from_behind.json`, arm + elbow bend) for both idle and moving, and the weapon keeps the vanilla placement/orientation; moving only adds a tiny fore/back swing: walking 5° backward centre with a 4° fan, sprinting 10° backward centre with an 8° fan, standing still no swing. It cross-fades smoothly with attack animations (fades out while swinging, back in afterwards), and **the offhand keeps its original animation when dual wielding** (the dagger keeps its previous holding pose).
 - **Cooldowns follow the weapon**: stored on the item as game time; dropping, swapping or rejoining never resets them.
 - **Dual wielding**: forge and sharpness effects trigger only from the main hand; off-hand hits trigger nothing; each hand keeps its own appearance.
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.

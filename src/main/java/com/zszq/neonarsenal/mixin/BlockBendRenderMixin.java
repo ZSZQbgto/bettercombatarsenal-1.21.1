@@ -1,6 +1,7 @@
 package com.zszq.neonarsenal.mixin;
 
 import com.zszq.neonarsenal.client.BlockPose;
+import com.zszq.neonarsenal.client.HoldPose;
 
 import net.minecraft.client.model.AgeableListModel;
 import net.minecraft.client.model.PlayerModel;
@@ -11,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Applies the blocking arm bend immediately before the model renders, after BC/FPA finished their
- * own setupAnim/bend pass. When no block pose is active this does nothing.
+ * Applies the block-pose / holding-pose arm bends immediately before the model renders, after
+ * BC/FPA finished their own setupAnim/bend pass. When no pose is active this does nothing.
  */
 @Mixin(AgeableListModel.class)
 public abstract class BlockBendRenderMixin {
@@ -22,6 +23,7 @@ public abstract class BlockBendRenderMixin {
     private void neonarsenal$applyBlockBend(CallbackInfo ci) {
         if ((Object) this instanceof PlayerModel<?> model) {
             BlockPose.applyRenderBends(model);
+            HoldPose.applyRenderBends(model);
         }
     }
 }

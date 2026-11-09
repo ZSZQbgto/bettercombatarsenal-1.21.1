@@ -81,7 +81,7 @@ public final class WeaponCatalog {
                     .attackDamage(6.2F)
                     .attackSpeed(-2.8F)
                     .betterCombatPreset(NeonArsenalPresets.SPEAR)
-                    .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
+                    .abilities(Ability.CHARGE_THRUST, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build());
 
     private static final Map<String, WeaponDefinition> BY_ID;

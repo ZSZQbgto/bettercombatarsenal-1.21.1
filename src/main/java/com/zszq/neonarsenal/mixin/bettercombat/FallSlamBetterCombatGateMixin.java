@@ -1,5 +1,6 @@
 package com.zszq.neonarsenal.mixin.bettercombat;
 
+import com.zszq.neonarsenal.compat.ChargeThrustState;
 import com.zszq.neonarsenal.compat.FallSlamState;
 
 import net.bettercombat.api.WeaponAttributes;
@@ -29,7 +30,7 @@ public class FallSlamBetterCombatGateMixin {
     /** Blocks Better Combat from creating a new client swing (and therefore its slam animation). */
     @Inject(method = "startUpswing", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private void neonarsenal$blockUpswing(WeaponAttributes attributes, CallbackInfo ci) {
-        if (FallSlamState.blockAttacks) {
+        if (FallSlamState.blockAttacks || ChargeThrustState.blockAttacks) {
             ci.cancel();
         }
     }
@@ -37,7 +38,7 @@ public class FallSlamBetterCombatGateMixin {
     /** Blocks a swing that was already queued before the fall slam from executing its hit. */
     @Inject(method = "performAttack", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private void neonarsenal$blockPerformAttack(CallbackInfo ci) {
-        if (FallSlamState.blockAttacks) {
+        if (FallSlamState.blockAttacks || ChargeThrustState.blockAttacks) {
             ci.cancel();
         }
     }

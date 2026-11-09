@@ -26,6 +26,7 @@ public abstract class ClientLevelParrySoundMixin {
                                               boolean distanceDelay, long seed, CallbackInfo ci) {
         if (sound == ModSounds.PARRY.get()) {
             BlockShakeEffects.trigger();
+            com.zszq.neonarsenal.client.fx.FirstPersonBlockBurst.trySpawn(x, y, z);
         }
     }
 }

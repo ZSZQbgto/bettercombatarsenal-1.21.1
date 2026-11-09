@@ -59,6 +59,12 @@ public final class NeonArsenalItemRenderer extends BlockEntityWithoutLevelRender
     public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack,
                              MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+
+        // Blocking weapons swap to the authored first-person parry pose while the player parries.
+        if (displayContext.firstPerson()) {
+            FirstPersonParryPose.apply(stack, displayContext, poseStack, itemId);
+        }
+
         boolean thumbnail = displayContext == ItemDisplayContext.GUI;
         ResourceLocation modelId = ResourceLocation.fromNamespaceAndPath(
                 itemId.getNamespace(),

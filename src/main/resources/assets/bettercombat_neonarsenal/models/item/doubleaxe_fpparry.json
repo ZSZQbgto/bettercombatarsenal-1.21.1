@@ -1,0 +1,32 @@
+{
+	"parent": "builtin/entity",
+	"textures": {
+		"particle": "bettercombat_neonarsenal:weapon/doubleaxe"
+	},
+	"display": {
+		"firstperson_righthand": {
+			"rotation": [
+				-19,
+				163,
+				-82
+			],
+			"translation": [
+				-8.5,
+				1.5,
+				0
+			]
+		},
+		"firstperson_lefthand": {
+			"rotation": [
+				0,
+				90,
+				-20
+			],
+			"translation": [
+				6,
+				0,
+				0
+			]
+		}
+	}
+}

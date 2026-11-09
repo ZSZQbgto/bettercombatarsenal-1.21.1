@@ -1,5 +1,6 @@
 package com.zszq.neonarsenal.mixin;
 
+import com.zszq.neonarsenal.compat.ChargeThrustState;
 import com.zszq.neonarsenal.compat.FallSlamState;
 
 import net.minecraft.client.Minecraft;
@@ -21,7 +22,7 @@ public abstract class MinecraftContinueAttackMixin {
 
     @Inject(method = "continueAttack(Z)V", at = @At("HEAD"), cancellable = true)
     private void neonarsenal$blockHoldAttack(boolean leftClick, CallbackInfo ci) {
-        if (FallSlamState.blockAttacks) {
+        if (FallSlamState.blockAttacks || ChargeThrustState.blockAttacks) {
             ci.cancel();
         }
     }

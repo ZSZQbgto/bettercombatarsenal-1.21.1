@@ -1,0 +1,20 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"weapon_holding_action_from_behind": {
+			"loop": true,
+			"bones": {
+				"right_arm": {
+					"rotation": [19.6832, 7.5342, 15.9601]
+				},
+				"right_arm_bend": {
+					"rotation": [-22.5, 0, 0]
+				},
+				"right_item": {
+					"rotation": [22.8981, 11.9127, 3.8139],
+					"position": [0, -1, 0]
+				}
+			}
+		}
+	}
+}

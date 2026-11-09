@@ -88,6 +88,10 @@ public final class FallSlamClient {
     private static boolean triggeringAttack;
     private static boolean serverWindup;
     private static boolean slamReported;
+    /** True once this fall qualified as a long fall (>{@value #MIN_FALL_BLOCKS} blocks / above ground). */
+    private static boolean longFallReached;
+    /** Deferred short-fall normal attack, performed in {@link #tickPending} on the landing tick. */
+    private static boolean landingNormalAttack;
 
     private FallSlamClient() {
     }
@@ -116,6 +120,23 @@ public final class FallSlamClient {
 
         if (phase == Phase.COMMITTED || phase == Phase.LOCK) {
             holdFilters();
+            return;
+        }
+        if (player.onGround() && phase != Phase.IDLE) {
+            // Landing while the falling-slash input is held: keep Better Combat's attack filtered for
+            // this tick (otherwise the held attack key starts a normal swing on the landing tick).
+            // A real long fall commits the falling slash on landing; a short hop that never qualified
+            // performs one normal attack instead. A tap released mid-air already performed its normal
+            // attack through tickPending and never reaches this branch.
+            holdFilters();
+            if (phase == Phase.PENDING && minecraft.options.keyAttack.isDown()
+                    && JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.FALL_SLASH)) {
+                if (longFallReached) {
+                    startWindup(player);
+                } else {
+                    landingNormalAttack = true;
+                }
+            }
             return;
         }
         if (player.isFallFlying()) {
@@ -198,26 +219,23 @@ public final class FallSlamClient {
                 || !JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.FALL_SLASH)) {
             return;
         }
-        // A real jump that is still inside the short-fall jump-slam window keeps its attack input:
-        // the falling slash must not swallow the jump-slam attack (and its claymore third-attack
-        // animation) merely because the ground is more than five blocks below the player.
-        if (phase == Phase.IDLE && player.fallDistance <= MIN_FALL_BLOCKS
+        // "Potential falling slash": the ground is more than five blocks below (even while still
+        // rising out of a jump). The press must not start a full jump-slam swing in that case -
+        // holding the key turns into the falling slash, tapping still performs the normal attack.
+        boolean overLongDrop = heightToGround(player) > MIN_FALL_BLOCKS;
+        // A long fall (the falling-slash condition from the spec): already fell more than five
+        // blocks, or descending with the ground more than five blocks below.
+        boolean longFall = player.fallDistance > MIN_FALL_BLOCKS
+                || (player.getDeltaMovement().y <= 0.0D && overLongDrop);
+        // A real short jump keeps its attack input (jump slam); only a potential long drop waits.
+        if (phase == Phase.IDLE && !overLongDrop && player.fallDistance <= MIN_FALL_BLOCKS
                 && JumpAttackHandler.isJumpAttackAirborne(player)) {
             return;
         }
-        // The fall height is always measured from the position where this fall started (the vanilla
-        // fall distance), not from the last attack press: cancelling the windup or re-pressing must
-        // not reset the accumulated fall. A descending player more than five blocks above the ground
-        // will still fall far enough for a falling slash, so that case is treated as a long fall from
-        // the press on and Better Combat's own airborne jump-slam animation is suppressed.
-        boolean longFall = player.fallDistance > MIN_FALL_BLOCKS;
-        if (!longFall) {
-            longFall = player.getDeltaMovement().y <= 0.0D
-                    && heightToGround(player) > MIN_FALL_BLOCKS;
-        }
-        if (!longFall) {
+        if (!overLongDrop && player.fallDistance <= MIN_FALL_BLOCKS) {
             return;
         }
+        longFallReached |= longFall;
 
         if (phase == Phase.IDLE) {
             phase = Phase.PENDING;
@@ -227,7 +245,10 @@ public final class FallSlamClient {
             // delayed hit, sound and trail must not leak into the windup.
             FallSlamAnimation.clearBetterCombatSwing();
         }
-        if (phase == Phase.PENDING && keyDownTicks >= LONG_PRESS_TICKS) {
+        // Enter the 1/3 windup once the long press is confirmed AND the fall actually qualifies as a
+        // long fall. A tap (released before the long press) stays a normal attack; it must not be
+        // converted into a falling slash merely because the player is inside the trigger radius.
+        if (phase == Phase.PENDING && keyDownTicks >= LONG_PRESS_TICKS && longFall) {
             startWindup(player);
         }
         if (phase == Phase.PENDING || phase == Phase.WINDUP) {
@@ -296,6 +317,13 @@ public final class FallSlamClient {
             holdFilters();
             return;
         }
+        if (landingNormalAttack) {
+            // A short hop that never qualified as a long fall: perform the deferred normal attack
+            // instead of turning it into a falling slash.
+            landingNormalAttack = false;
+            shortTapAttack(minecraft, player);
+            return;
+        }
         boolean attackDown = minecraft.options.keyAttack.isDown();
         boolean airborne = !player.onGround() && !player.getAbilities().flying;
         boolean armed = JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.FALL_SLASH);
@@ -305,8 +333,9 @@ public final class FallSlamClient {
             holdFilters();
             return;
         }
-        if (!attackDown && airborne && armed && keyDownTicks < LONG_PRESS_TICKS) {
-            // Short tap: one normal attack on release.
+        if (!attackDown && armed && keyDownTicks < LONG_PRESS_TICKS) {
+            // Short tap: one normal attack on release. This also covers a tap whose release lands on
+            // the same tick (the attack must not be swallowed by the landing).
             shortTapAttack(minecraft, player);
             return;
         }
@@ -506,6 +535,8 @@ public final class FallSlamClient {
         commitTicks = 0;
         slamReported = false;
         glidingSlash = false;
+        longFallReached = false;
+        landingNormalAttack = false;
         FallSlamState.attackLock = false;
     }
 

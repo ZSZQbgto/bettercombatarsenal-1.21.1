@@ -53,6 +53,8 @@ public final class NeonArsenal {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.SharpnessEvents::onAnvilUpdate);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.MendingSharpness::onPickupXp);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.ForgeAnvil::onAnvilUpdate);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.GrindstoneWipe::onPlaceItem);
@@ -92,6 +94,10 @@ public final class NeonArsenal {
                 com.zszq.neonarsenal.compat.FallSlamHandler::onLivingFall);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.FallSlamHandler::onLivingDeath);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.ChargeThrustHandler::onPlayerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.ChargeThrustHandler::onPlayerLoggedOut);
     }
 
     private void registerPayloads(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {
@@ -126,6 +132,22 @@ public final class NeonArsenal {
                     if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
                         com.zszq.neonarsenal.compat.FallSlamHandler.settleGlideStrike(player,
                                 payload.targetId(), payload.speed());
+                    }
+                }));
+        event.registrar("1").playToServer(
+                com.zszq.neonarsenal.compat.ChargeThrustWindupPayload.TYPE,
+                com.zszq.neonarsenal.compat.ChargeThrustWindupPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                        com.zszq.neonarsenal.compat.ChargeThrustHandler.setWindup(player, payload.active());
+                    }
+                }));
+        event.registrar("1").playToServer(
+                com.zszq.neonarsenal.compat.ChargeThrustStrikePayload.TYPE,
+                com.zszq.neonarsenal.compat.ChargeThrustStrikePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                        com.zszq.neonarsenal.compat.ChargeThrustHandler.strike(player, payload.charged());
                     }
                 }));
     }

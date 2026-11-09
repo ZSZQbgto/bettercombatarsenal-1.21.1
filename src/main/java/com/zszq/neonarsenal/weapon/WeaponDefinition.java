@@ -45,7 +45,9 @@ public record WeaponDefinition(
         /** Right-click blocking with the parry pose. */
         BLOCK,
         /** Jump slam during the falling phase of a jump (跳劈). */
-        JUMP_ATTACK
+        JUMP_ATTACK,
+        /** Mounted charge thrust with the spear (冲锋前刺). */
+        CHARGE_THRUST
     }
 
     /** Same id constraint Minecraft applies to registry names. */
