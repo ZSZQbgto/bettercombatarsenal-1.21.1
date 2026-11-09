@@ -77,7 +77,7 @@ public record WeaponDefinition(
                 .stacksTo(1)
                 .attributes(SwordItem.createAttributes(tier, attackDamage, attackSpeed));
         if (itemFactory == null) {
-            return new com.zszq.neonarsenal.item.SharpnessWeaponItem(tier, properties, abilities);
+            return new com.zszq.neonarsenal.item.SharpnessWeaponItem(id, tier, properties, abilities);
         }
         return itemFactory.create(tier, properties);
     }

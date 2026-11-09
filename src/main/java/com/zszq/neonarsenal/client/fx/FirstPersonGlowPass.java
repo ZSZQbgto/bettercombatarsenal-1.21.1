@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.model.BakedModel;
@@ -80,7 +81,8 @@ public final class FirstPersonGlowPass {
         pose.last().normal().set(new Matrix3f(slot.itemPose).invert().transpose());
 
         VertexConsumer buffer = buffers.getBuffer(layer);
-        WeaponGlow.drawOverlayQuads(buffer, pose.last(), slot.model, slot.tint, slot.alpha);
+        WeaponGlow.drawFlowingOverlayQuads(buffer, pose.last(), slot.model, slot.tint, slot.alpha,
+                false, LightTexture.FULL_BRIGHT);
         buffers.endBatch(layer);
 
         RenderSystem.getModelViewStack().popMatrix();

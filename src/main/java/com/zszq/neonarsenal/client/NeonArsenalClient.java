@@ -52,8 +52,28 @@ public final class NeonArsenalClient {
         NeoForge.EVENT_BUS.addListener(this::clientTick);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.FallSlamClient::preTick);
         NeoForge.EVENT_BUS.addListener(FirstPersonGlowPass::render);
+        NeoForge.EVENT_BUS.addListener(NeonArsenalClient::onItemTooltip);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onRenderHand);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onCameraAngles);
+    }
+
+    /**
+     * The arsenal weapons draw their own enchantment section (numeric bonuses by default, names and
+     * effects while Shift is held), so the plain vanilla enchantment-name lines are removed from
+     * their tooltip to avoid showing the same information twice and to keep the default tooltip to
+     * the numeric bonuses only.
+     */
+    private static void onItemTooltip(net.neoforged.neoforge.event.entity.player.ItemTooltipEvent event) {
+        net.minecraft.world.item.ItemStack stack = event.getItemStack();
+        if (!(stack.getItem() instanceof com.zszq.neonarsenal.item.SharpnessWeaponItem)) {
+            return;
+        }
+        java.util.List<net.minecraft.network.chat.Component> tooltip = event.getToolTip();
+        for (var entry : net.minecraft.world.item.enchantment.EnchantmentHelper
+                .getEnchantmentsForCrafting(stack).entrySet()) {
+            tooltip.remove(net.minecraft.world.item.enchantment.Enchantment
+                    .getFullname(entry.getKey(), entry.getValue()));
+        }
     }
 
     private void clientSetup(FMLClientSetupEvent event) {

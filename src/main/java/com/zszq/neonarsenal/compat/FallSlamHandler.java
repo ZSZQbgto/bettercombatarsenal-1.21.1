@@ -14,11 +14,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.CombatRules;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -98,6 +101,13 @@ public final class FallSlamHandler {
      * Falling-slash landing rules: below 10 blocks the player is fall-damage immune; above 10 blocks
      * they lose 1 HP per extra 3 blocks, never below 1 HP. The real landing fall height is kept so the
      * hit damage can use it.
+     *
+     * <p>The custom HP loss is reduced by the same vanilla fall-damage protections the ordinary fall
+     * would use: the {@code damage_protection} enchantment effects (Feather Falling, Protection, and
+     * modded equivalents) are queried with the vanilla fall damage source and run through the vanilla
+     * magic-absorb formula, and the vanilla {@code FALL_DAMAGE_MULTIPLIER} attribute scales the raw
+     * loss. Armour does not apply, exactly like vanilla fall damage (the fall damage type bypasses
+     * armour).</p>
      */
     public static void onLivingFall(LivingFallEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
@@ -130,8 +140,19 @@ public final class FallSlamHandler {
         if (steps <= 0) {
             return;
         }
+        float damage = steps * (float) player.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER);
+        if (player.level() instanceof ServerLevel level) {
+            DamageSource source = player.damageSources().fall();
+            float protection = EnchantmentHelper.getDamageProtection(level, player, source);
+            if (protection > 0.0F) {
+                damage = CombatRules.getDamageAfterMagicAbsorb(damage, protection);
+            }
+        }
+        if (damage <= 0.0F) {
+            return;
+        }
         float health = player.getHealth();
-        player.setHealth(Math.max(1.0F, health - steps * 1.0F));
+        player.setHealth(Math.max(1.0F, health - damage));
     }
 
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {

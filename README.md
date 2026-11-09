@@ -74,7 +74,7 @@
 - 落地有专属落地音效；落地时若武器锻入烈焰粉，会迸发大量粒子。
 - **下落斩击的额外攻击力随实际下落高度提升，且没有上限**：第 1–10 格每格 +4 伤害，第 11–20 格每格 +2 伤害，之后每格 +1 伤害。
 - 松开攻击键（尚未到 4 格）会在 0.2 秒内淡回下落姿态；**已累计的下落距离不会重置**，再次按住时仍按本次下落起点继续判定（只需重新长按 0.15 秒），不会要求再下落超过 5 格。
-- 下落斩击的摔落结算按**本次下落起点**计算高度：下落 **<10 格免疫摔落伤害**；**>10 格每多 3 格扣 1 点血量**，最低保留 **1 点血**，不会摔死。中途取消/重按斩击不重置该高度；最终没有触发下落斩击的普通下落仍按原版摔落伤害结算。
+- 下落斩击的摔落结算按**本次下落起点**计算高度：下落 **<10 格免疫摔落伤害**；**>10 格每多 3 格扣 1 点血量**，最低保留 **1 点血**，不会摔死；扣血量会经过原版摔落保护（摔落保护/保护附魔，走原版 `damage_protection` 与魔法减伤公式）和 `FALL_DAMAGE_MULTIPLIER` 属性减免，护甲不参与（与原版摔落一致）。中途取消/重按斩击不重置该高度；最终没有触发下落斩击的普通下落仍按原版摔落伤害结算。
 - **装备鞘翅时**：下落斩击蓄力过程中单击空格展开滑翔会**保持当前蓄力姿势**；此后不再按“距地 4 格/落地”触发，而是**撞击生物时触发斩击**。滑翔结束时若没有撞到生物，斩击不会触发，蓄力自动收回。
 - **鞘翅滑翔中**（手持可鞘翅斩击的武器）**长按左键 0.15 秒**进入同样的滑行斩击蓄力（1/3 定格），撞到生物时触发斩击；**滑翔中长按/点击右键没有效果**。滑翔斩击的额外攻击力按**撞击瞬间的速度**计算：把速度换算成等效下落高度（`v = √(2·0.08·h)`）后套用同一分档，与下落斩击保持平衡。
 - **鞘翅斩击是独立分配的技能**：仅**阔剑、双刃斧、横刀、双刃剑**可用（与下落斩击相同）；其他武器在滑翔和下落时保持**平地的攻击方式**，不会进入蓄力。
@@ -91,7 +91,8 @@
 - 格挡的音效、粒子与锋利度消耗有 **0.3–0.8 秒随机间隔**（每次重新随机）；间隔内的格挡仍正常免伤，但不再播放音效与粒子，也**不扣锋利度**。
 - 每次触发格挡音效/粒子时：手部与武器颤动约 2px、持续约 0.1 秒；视角轻微颤动；角色向后平移约 1/4 格。
 - 格挡 **2 秒内**松开不打断连招；超过 2 秒再松开则打断连招。
-- 宽窄皮肤均适配；格挡时袖子、外套、裤腿与**头部外层**（含 3D 皮肤层的 3D 网格）都会跟随动作；**格挡静止时全身高度略微上抬**（约 1px），避免下沉感。
+- 宽窄皮肤均适配；格挡时袖子、外套、裤腿与**头部外层**（含 3D 皮肤层的 3D 网格）都会跟随动作；**格挡静止时全身只比移动格挡略低约 1 像素**（头部与身体一起下移）。
+- **骑马 / 坐船 / 坐矿车等坐姿格挡时**，下半身保持原版坐姿（不套用动画文件的站姿腿），只有上半身进入格挡姿态，整体保持乘坐高度。
 - **穿戴鞘翅格挡时**，鞘翅会收拢为潜行时的姿态，并跟随躯干/肩膀一起运动，不会与身体分离。
 - **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
 
@@ -108,12 +109,23 @@
 | 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | 单手短刃，纯输出 |
 | 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | 双手，+1 距离 |
 
+### 8. 附魔
+
+- 本模组武器可在**附魔台 / 铁砧（附魔书）/ `/enchant`** 附魔；三种伤害附魔（锋利、亡灵杀手、节肢杀手）**互斥**，只能选一（沿用原版 `exclusive_set`）。
+- 天然可附魔列表：
+  - **长剑、双刃剑、横刀、刺剑、匕首**：锋利 V、亡灵杀手 V、节肢杀手 V、击退 II、抢夺 III、火焰附加 II、耐久 III、经验修补 I、横扫之刃 III。
+  - **阔剑、双刃斧、长枪**：锋利 V、亡灵杀手 V、节肢杀手 V、击退 II、抢夺 III、火焰附加 II、耐久 III、经验修补 I（**无横扫之刃**）。
+  - 长枪不适用三叉戟附魔（忠诚、激流、引雷、穿刺）；**致密/破甲**为原版重锤专属，不能自然获得。`/enchant` 命令可强制附上，且仍按原版排斥（致密/破甲 与 锋利/亡灵杀手/节肢杀手/穿刺 互斥）。
+- **附魔视觉效果**：未锻入**发光墨囊**时无效果；锻入后刀刃发光不再是单一颜色，而是**中等速度的流光**——颜色沿刀刃在武器当前颜色环（染料/锻刃混色）附近动态流动；未染色时表现为明暗流光。
+- **不显示原版附魔光效**：附魔武器不会出现原版附魔闪烁，只保留本模组自己的刀刃发光/流光。
+- **Tooltip**：默认只显示**数值加成**，且统一为百分比：锋利/亡灵杀手/节肢杀手/火焰附加折算为**相对武器基础攻击伤害的百分比**（锋利与锻刃伤害百分比合并为一行），耐久/横扫本身即百分比；击退/抢夺/经验修补保留原版文字数值。按住 **Shift** 查看附魔名称与效果明细、综合性能与锻刃说明。
+
 ## 工艺速查
 
 - **冷却跟武器走**：存在物品上按游戏时间计算，丢弃、换手、重进都不刷新。
 - **双持**：锻刃与锋利度只由主手攻击触发；副手砍人不触发、不消耗；两手外观各自独立。
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
-- **Tooltip**：平时显示刀刃锐度、颜色（染色显示为着色模块，仅锻刃层时显示锻刃颜色）、锻刃效果；按住 Shift 看综合性能与每层说明。
+- **Tooltip**：平时显示刀刃锐度、颜色、附魔数值加成与锻刃百分比加成；按住 Shift 看附魔明细、综合性能与每层说明。
 - **配置**：模组列表滑条——粒子密度 0–3、刀刃发光强度 0–1。
 - **JEI**：176 条锻刃配方，铁砧为催化剂。
 - **多人**：锻刃、冷却与粒子效果在多人联机下保持一致。
@@ -218,9 +230,21 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - Block sounds, particles and sharpness cost have a forced **random 0.3–0.8 s gap**, rerolled every time; blocks during the gap still negate damage but play no sound/particles and cost no sharpness.
 - Whenever sound/particles actually trigger: the hand and weapon shake by about 2 px for ~0.1 s, the camera shakes slightly, and the player is pushed back about 1/4 block.
 - Releasing within **2 s** keeps the combo; blocking longer than 2 s and releasing breaks the combo.
-- Slim and wide skins both fit; sleeves and jacket follow the block pose.
+- Slim and wide skins both fit; sleeves and jacket follow the block pose; **while blocking stationary the whole figure sits only about 1 px lower than the moving block pose** (head and body move together).
+- **Blocking while riding (horse, boat, minecart, ...)**: the lower body keeps the vanilla seated pose and the model keeps the seat height; only the upper body enters the block pose.
 - **Blocking with an elytra equipped** folds the wings into the sneaking elytra pose and keeps them attached to the posed torso/shoulders instead of floating apart.
 - **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking.
+
+### 8. Enchantments
+
+- Arsenal weapons are enchantable at the **enchanting table, the anvil (books) and `/enchant`**; the three damage enchantments (Sharpness, Smite, Bane of Arthropods) are **mutually exclusive**, exactly like vanilla.
+- Natural enchantment lists:
+  - **Longsword, Double-Edged Sword, Hengdao, Rapier, Dagger**: Sharpness V, Smite V, Bane of Arthropods V, Knockback II, Looting III, Fire Aspect II, Unbreaking III, Mending I, Sweeping Edge III.
+  - **Broadsword, Double-Bladed Axe, Spear**: the same list **without Sweeping Edge**.
+  - The spear accepts no trident enchantments (Loyalty, Riptide, Channeling, Impaling); **Density/Breach** are mace-only and cannot be obtained naturally. `/enchant` can force them and the vanilla exclusive sets are still enforced (Density/Breach vs Sharpness/Smite/Bane/Impaling).
+- **Visual effect**: no glow ink sac → no effect; with it the blade glow is no longer a single colour but a **medium-speed flowing light** whose colours travel along the blade near the weapon's current colour-ring colour (dye/forge mix); an uncoloured blade shows a brightness flow.
+- **No vanilla enchantment glint**: enchanted arsenal weapons never show the vanilla foil effect; only the mod's own blade glow/flow is used.
+- **Tooltip**: by default only the **numeric bonuses**, uniformly as percentages: Sharpness/Smite/Bane of Arthropods/Fire Aspect are converted to **percentages of the weapon's base attack damage** (sharpness is merged into the forge damage percentage line), while Unbreaking/Sweeping Edge are percentages already; Knockback/Looting/Mending keep their vanilla value text. Hold **Shift** for enchantment names and effect details, total stats and forge descriptions.
 
 ## Weapons
 
@@ -240,7 +264,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - **Cooldowns follow the weapon**: stored on the item as game time; dropping, swapping or rejoining never resets them.
 - **Dual wielding**: forge and sharpness effects trigger only from the main hand; off-hand hits trigger nothing; each hand keeps its own appearance.
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.
-- **Tooltip**: shows blade sharpness, colour (colour module when dyed, forge colour when only layers are present) and forge effects; hold Shift for totals and per-layer text.
+- **Tooltip**: shows blade sharpness, colour, numeric enchantment/forge bonuses by default; hold Shift for enchantment details, totals and per-layer text.
 - **Config**: mod-list sliders — particle density 0–3, blade glow intensity 0–1.
 - **JEI**: 176 forging recipes with the anvil as catalyst.
 - **Multiplayer**: forging, cooldowns and particle effects stay consistent in multiplayer.

@@ -46,8 +46,8 @@ public final class BlockPose {
     private static final Set<String> TWO_HANDED = Set.of(
             "claymore", "twinblade", "doubleaxe", "hengdao", "spear");
 
-    /** Extra height of the stationary blocking pose above the grounded position, in model units. */
-    private static final float STATIONARY_LIFT = 1.0F;
+    /** Vertical drop of the stationary block pose below the moving block pose, in model units. */
+    private static final float STATIONARY_DROP = 1.0F;
 
     private static final Map<UUID, Float> PROGRESS = new HashMap<>();
     private static final Map<PlayerModel<?>, float[]> RENDER_BENDS = new WeakHashMap<>();
@@ -103,6 +103,10 @@ public final class BlockPose {
 
         boolean slim = player.getSkin().model() == PlayerSkin.Model.SLIM;
         float armBaseY = slim ? 2.5F : 2.0F;
+        // Riding (horse, boat, minecart, ...) keeps the vanilla seated lower body: only the upper
+        // body enters the block pose and the model keeps the vehicle seat height without any
+        // vertical shift.
+        boolean riding = player.isPassenger();
         // Only the file drives these bones; at full progress other animations are fully replaced.
         setBone(model.body, bones.get("torso"), 0.0F, 0.0F, 0.0F, progress);
         setBone(model.head, bones.get("head"), 0.0F, 0.0F, 0.0F, progress);
@@ -125,7 +129,7 @@ public final class BlockPose {
         // Block -> sneak transition: vanilla switches the legs to the sneaking position at once
         // while the upper body still blends for 0.1 s. Lerp the legs by the same progress so they
         // move together with the body. (Only active while the player actually crouches again.)
-        if (model.crouching && progress < 1.0F) {
+        if (!riding && model.crouching && progress < 1.0F) {
             float sneak = 1.0F - progress;
             model.rightLeg.z = 4.0F * sneak;
             model.leftLeg.z = 4.0F * sneak;
@@ -137,7 +141,7 @@ public final class BlockPose {
         // block pose blend.
         boolean stationary = player.getDeltaMovement().horizontalDistanceSqr() < 1.0E-4D
                 && player.walkAnimation.speed() < 0.02F;
-        boolean wantFileLegs = stationary && !model.crouching;
+        boolean wantFileLegs = stationary && !model.crouching && !riding;
         float deltaSeconds = Minecraft.getInstance().getFrameTimeNs() / 1_000_000_000.0F;
         float legTarget = wantFileLegs ? 1.0F : 0.0F;
         float legBlend = LEG_BLEND.getOrDefault(player.getUUID(), 0.0F);
@@ -173,12 +177,11 @@ public final class BlockPose {
         model.leftPants.copyFrom(model.leftLeg);
         model.rightPants.copyFrom(model.rightLeg);
 
-        // Lower the whole blocking pose so the authored file-leg soles touch the ground (model
-        // bottom = y 24). The offset follows the file-leg pose; while walking the vanilla legs swing
-        // and a full offset would make the whole torso bob up and down, so weight it by the file-leg
-        // blend: stationary blocking is grounded, walking keeps the torso steady. The stationary
-        // pose is then raised by a tiny lift so the whole blocking figure sits a little higher.
-        float footOffset = (groundOffset(model) - STATIONARY_LIFT) * fileLegWeight;
+        // Vertical placement: the moving block pose keeps the vanilla body height and the stationary
+        // stance sits only a tiny drop below it, shifted as a whole (body, head, arms, legs and all
+        // skin layers together) so stopping does not visibly sink the character. While riding the
+        // model keeps the vehicle seat height and is never shifted.
+        float footOffset = riding ? 0.0F : STATIONARY_DROP * fileLegWeight;
         if (Math.abs(footOffset) > 0.001F) {
             shiftY(model.body, footOffset);
             shiftY(model.head, footOffset);
@@ -202,22 +205,6 @@ public final class BlockPose {
 
         RENDER_BENDS.put(model, new float[]{bendAngle(bones.get("right_arm_bend"), progress),
                 bendAngle(bones.get("left_arm_bend"), progress), progress});
-    }
-
-    /** {@return the vertical shift needed so the rotated leg soles sit on model y=24}. */
-    private static float groundOffset(PlayerModel<?> model) {
-        float bottom = Math.min(legBottom(model.rightLeg), legBottom(model.leftLeg));
-        return 24.0F - bottom;
-    }
-
-    private static float legBottom(ModelPart leg) {
-        if (leg == null) {
-            return 24.0F;
-        }
-        float cos = (float) Math.cos(leg.xRot);
-        float sin = Math.abs((float) Math.sin(leg.xRot));
-        // Leg cube is 12 units long and 4 units wide; lowest corner of the sole.
-        return leg.y + 12.0F * cos - 2.0F * sin;
     }
 
     private static void shiftY(ModelPart part, float offset) {

@@ -7,12 +7,14 @@ import java.util.Set;
 import com.zszq.neonarsenal.weapon.WeaponDefinition.Ability;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
@@ -33,17 +35,53 @@ public class SharpnessWeaponItem extends Item {
     private static Method hasShiftDown;
     private static boolean shiftLookupTried;
 
+    private final String weaponId;
     private final Tier tier;
     private final Set<Ability> abilities;
 
-    public SharpnessWeaponItem(Tier tier, Item.Properties properties) {
-        this(tier, properties, Set.of());
+    public SharpnessWeaponItem(String weaponId, Tier tier, Item.Properties properties) {
+        this(weaponId, tier, properties, Set.of());
     }
 
-    public SharpnessWeaponItem(Tier tier, Item.Properties properties, Set<Ability> abilities) {
+    public SharpnessWeaponItem(String weaponId, Tier tier, Item.Properties properties, Set<Ability> abilities) {
         super(properties);
+        this.weaponId = weaponId;
         this.tier = tier;
         this.abilities = Set.copyOf(abilities);
+    }
+
+    /** {@return the catalogue id of this weapon (for example {@code claymore}).} */
+    public String weaponId() {
+        return this.weaponId;
+    }
+
+    /**
+     * Arsenal weapons are not damageable, so the vanilla "has max damage" test would never make
+     * them enchantable; allow the enchanting table, the anvil and the {@code /enchant} command.
+     */
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return true;
+    }
+
+    /**
+     * Arsenal weapons use their own blade glow (the flowing light once a glow ink sac is forged) and
+     * never the vanilla enchantment glint, so enchanted weapons stay visually identical to the mod's
+     * own effect.
+     */
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return false;
+    }
+
+    @Override
+    public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
+        return com.zszq.neonarsenal.weapon.WeaponEnchantments.supports(this.weaponId, enchantment);
+    }
+
+    @Override
+    public boolean isPrimaryItemFor(ItemStack stack, Holder<Enchantment> enchantment) {
+        return com.zszq.neonarsenal.weapon.WeaponEnchantments.supports(this.weaponId, enchantment);
     }
 
     /** {@return whether this weapon may perform the given skill}. */
@@ -125,24 +163,45 @@ public class SharpnessWeaponItem extends Item {
                     .withStyle(style -> style.withColor(colour)));
         }
         List<String> layers = Forge.layers(stack);
-        if (layers.isEmpty()) {
-            tooltip.add(Component.translatable(PREFIX + "not_forged").withStyle(ChatFormatting.DARK_GRAY));
+        List<Component> enchantBonuses = EnchantmentTips.bonuses(stack);
+        double sharpnessPercent = EnchantmentTips.sharpnessPercent(stack);
+        boolean shift = shiftDown();
+
+        if (!shift) {
+            // Default view: only the numeric bonuses, all damage-type enchantments folded into the
+            // same percentage lines the forge bonuses use.
+            if (!layers.isEmpty()) {
+                double[] bonus = heldBonuses(layers);
+                addBonusLine(tooltip, "bonus.damage", bonus[0] + sharpnessPercent / 100.0D);
+                addBonusLine(tooltip, "bonus.attack_speed", bonus[1]);
+                addBonusLine(tooltip, "bonus.move_speed", bonus[2]);
+            } else if (sharpnessPercent > 0.0D) {
+                addBonusLine(tooltip, "bonus.damage", sharpnessPercent / 100.0D);
+            }
+            if (!enchantBonuses.isEmpty()) {
+                tooltip.add(Component.translatable(PREFIX + "section_enchant_bonus")
+                        .withStyle(ChatFormatting.GOLD));
+                enchantBonuses.forEach(tooltip::add);
+            }
+            if (!layers.isEmpty()) {
+                tooltip.add(Component.translatable(PREFIX + "forge_compact", forgeNames(layers))
+                        .withStyle(ChatFormatting.GRAY));
+            } else {
+                tooltip.add(Component.translatable(PREFIX + "not_forged")
+                        .withStyle(ChatFormatting.DARK_GRAY));
+            }
+            tooltip.add(Component.translatable(PREFIX + "hint")
+                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             return;
         }
 
-        if (!shiftDown()) {
-            Component names = Component.empty();
-            for (int i = 0; i < layers.size(); i++) {
-                if (i > 0) {
-                    names = names.copy().append(Component.literal(" + ").withStyle(ChatFormatting.DARK_GRAY));
-                }
-                String layer = layers.get(i);
-                names = names.copy().append(Component.translatable(layerNameKey(layer))
-                        .withStyle(style -> style.withColor(Forge.colorOf(layer))));
-            }
-            tooltip.add(Component.translatable(PREFIX + "forge_compact", names).withStyle(ChatFormatting.GRAY));
-            tooltip.add(Component.translatable(PREFIX + "hint")
-                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        // Shift view: the detailed enchantment list plus the complete forge/stats description.
+        if (!enchantBonuses.isEmpty() || sharpnessPercent > 0.0D) {
+            tooltip.add(Component.translatable(PREFIX + "section_enchant").withStyle(ChatFormatting.GOLD));
+            EnchantmentTips.details(stack).forEach(tooltip::add);
+        }
+        if (layers.isEmpty()) {
+            tooltip.add(Component.translatable(PREFIX + "not_forged").withStyle(ChatFormatting.DARK_GRAY));
             return;
         }
 
@@ -167,6 +226,20 @@ public class SharpnessWeaponItem extends Item {
                 tooltip.add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
             }
         }
+    }
+
+    /** {@return the "layer + layer + ..." component used by the compact tooltip line}. */
+    private static Component forgeNames(List<String> layers) {
+        Component names = Component.empty();
+        for (int i = 0; i < layers.size(); i++) {
+            if (i > 0) {
+                names = names.copy().append(Component.literal(" + ").withStyle(ChatFormatting.DARK_GRAY));
+            }
+            String layer = layers.get(i);
+            names = names.copy().append(Component.translatable(layerNameKey(layer))
+                    .withStyle(style -> style.withColor(Forge.colorOf(layer))));
+        }
+        return names;
     }
 
     private static void addBonusLine(List<Component> tooltip, String labelKey, double value) {

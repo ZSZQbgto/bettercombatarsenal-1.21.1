@@ -1,5 +1,9 @@
 package com.zszq.neonarsenal.client.fx;
 
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -32,6 +36,11 @@ import net.minecraft.world.item.ItemStack;
  * <p>The overlay is drawn with full-bright light (so it ignores the world light level) and, by
  * default, additive blending so it reads as a self-lit glow instead of a flat painted layer. No
  * supplied model or texture is edited.</p>
+ *
+ * <p>Once the glow ink sac is forged the glow is no longer a single flat colour: the overlay is
+ * emitted vertex by vertex with a flowing colour, so the blade shows medium-speed bands of colour
+ * that travel along the blade. The hues stay near the weapon's current colour-ring colour (dye or
+ * mixed forge colour), with a matching brightness wave so even an uncoloured blade shows the flow.</p>
  */
 public final class WeaponGlow {
 
@@ -129,6 +138,18 @@ public final class WeaponGlow {
 
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
+    /** Blade direction (axis index, min, extent) of every overlay model, in model-space units. */
+    private static final Map<BakedModel, float[]> BLADE_COORDS = new WeakHashMap<>();
+
+    /** Flow speed in colour cycles per second ("medium" speed). */
+    private static final float FLOW_SPEED = 0.45F;
+    /** Number of colour bands along the blade. */
+    private static final float FLOW_CYCLES = 1.4F;
+    /** Maximum hue distance from the weapon's colour-ring colour, in degrees. */
+    private static final float FLOW_HUE = 26.0F;
+    /** Brightness wave amplitude so even an uncoloured (white) blade visibly flows. */
+    private static final float FLOW_BRIGHTNESS = 0.22F;
+
     /** Cached "Iris shader pack in use" probe; re-checked at most every two seconds. */
     private static Boolean shadersActive;
     private static long shadersCheckedAt;
@@ -176,24 +197,22 @@ public final class WeaponGlow {
                     overlay.getQuads(null, null, RANDOM), tint, 0.75F, packedLight);
         }
 
-        if (!config.enabled) {
-            return;
-        }
-
         float sharpnessFactor = com.zszq.neonarsenal.item.Sharpness.glowFactor(stack);
         if (config.glow.enabled && config.glow.alpha > 0.0F && sharpnessFactor > 0.0F
                 && com.zszq.neonarsenal.item.Forge.glowEnabled(stack)) {
             float[] tint = forgeTint(stack, config);
             float alpha = config.glow.alpha * sharpnessFactor
                     * (float) com.zszq.neonarsenal.config.NeonArsenalConfig.bladeGlowIntensity();
+            RenderType layer = layerFor(config);
+            boolean emissive = layer == EMISSIVE_LAYER;
+            boolean fullBright = emissive || layer == ADDITIVE_LAYER || layer == DEFERRED_LAYER;
             if (context.firstPerson() && shaderPackActive()) {
                 // Iris adaption: blending inside the hand pass is controlled by the shader pack, so
                 // the glow is drawn after the hands (GUI pre phase) with the captured matrices.
                 FirstPersonGlowPass.capture(context, overlay, poseStack, tint, alpha);
             } else {
-                PoseStack.Pose pose = poseStack.last();
-                drawOverlay(buffers.getBuffer(layerFor(config)), pose, overlay,
-                        tint, alpha);
+                drawFlowing(buffers.getBuffer(layer), poseStack.last(), overlay, tint, alpha,
+                        emissive, fullBright ? LightTexture.FULL_BRIGHT : packedLight);
             }
         }
 
@@ -221,23 +240,232 @@ public final class WeaponGlow {
         return tint;
     }
 
-    private static void drawOverlay(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
-                                    float[] tint, float alpha) {
-        for (Direction direction : Direction.values()) {
-            writeQuads(buffer, pose, overlay.getQuads(null, direction, RANDOM), tint, alpha);
-        }
-        writeQuads(buffer, pose, overlay.getQuads(null, null, RANDOM), tint, alpha);
-    }
-
     /** Additive, full-bright layer used by the deferred first-person pass. */
     public static RenderType deferredLayer() {
         return DEFERRED_LAYER;
     }
 
-    /** Draws every overlay quad; shared with the deferred first-person pass. */
-    public static void drawOverlayQuads(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
-                                        float[] tint, float alpha) {
-        drawOverlay(buffer, pose, overlay, tint, alpha);
+    /**
+     * Draws the flowing glow overlay; shared with the deferred first-person pass.
+     *
+     * @param emissive   the target layer is the NEW_ENTITY emissive format (needs overlay/normal)
+     * @param packedLight lightmap to use for non-full-bright layers
+     */
+    public static void drawFlowingOverlayQuads(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
+                                               float[] tint, float alpha, boolean emissive, int packedLight) {
+        drawFlowing(buffer, pose, overlay, tint, alpha, emissive, packedLight);
+    }
+
+    /** Emits the overlay quads with per-vertex flowing colours. */
+    private static void drawFlowing(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
+                                    float[] tint, float alpha, boolean emissive, int packedLight) {
+        float[] hsv = rgbToHsv(tint);
+        float[] coords = bladeCoords(overlay);
+        double seconds = System.nanoTime() / 1.0E9D;
+        for (Direction direction : Direction.values()) {
+            writeFlowQuads(buffer, pose, overlay.getQuads(null, direction, RANDOM), hsv, coords,
+                    alpha, emissive, packedLight, seconds);
+        }
+        writeFlowQuads(buffer, pose, overlay.getQuads(null, null, RANDOM), hsv, coords,
+                alpha, emissive, packedLight, seconds);
+    }
+
+    private static void writeFlowQuads(VertexConsumer buffer, PoseStack.Pose pose, List<BakedQuad> quads,
+                                       float[] hsv, float[] coords, float alpha, boolean emissive,
+                                       int packedLight, double seconds) {
+        for (BakedQuad quad : quads) {
+            int[] data = quad.getVertices();
+            int stride = data.length / 4;
+            Direction direction = quad.getDirection();
+            for (int i = 0; i < 4; i++) {
+                int offset = i * stride;
+                float x = Float.intBitsToFloat(data[offset]);
+                float y = Float.intBitsToFloat(data[offset + 1]);
+                float z = Float.intBitsToFloat(data[offset + 2]);
+                float u = Float.intBitsToFloat(data[offset + 4]);
+                float v = Float.intBitsToFloat(data[offset + 5]);
+                float[] rgb = flowColor(hsv, bladeCoord(coords, x, y, z), seconds);
+                buffer.addVertex(pose, x, y, z)
+                        .setColor(rgb[0], rgb[1], rgb[2], alpha)
+                        .setUv(u, v);
+                if (emissive) {
+                    buffer.setOverlay(OverlayTexture.NO_OVERLAY);
+                    buffer.setLight(LightTexture.FULL_BRIGHT);
+                    buffer.setNormal(pose, direction.getStepX(), direction.getStepY(), direction.getStepZ());
+                } else {
+                    buffer.setLight(packedLight);
+                }
+            }
+        }
+    }
+
+    /**
+     * {@return the blade direction of the overlay model: axis index, minimum and extent, in model
+     * units}. The overlay only covers the authored blade pixels, so the longest extent is the blade
+     * direction regardless of the weapon's model orientation.
+     */
+    private static float[] bladeCoords(BakedModel overlay) {
+        float[] cached = BLADE_COORDS.get(overlay);
+        if (cached != null) {
+            return cached;
+        }
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        for (Direction direction : Direction.values()) {
+            float[] bounds = bounds(overlay.getQuads(null, direction, RANDOM));
+            minX = Math.min(minX, bounds[0]);
+            minY = Math.min(minY, bounds[1]);
+            minZ = Math.min(minZ, bounds[2]);
+            maxX = Math.max(maxX, bounds[3]);
+            maxY = Math.max(maxY, bounds[4]);
+            maxZ = Math.max(maxZ, bounds[5]);
+        }
+        float[] bounds = bounds(overlay.getQuads(null, null, RANDOM));
+        minX = Math.min(minX, bounds[0]);
+        minY = Math.min(minY, bounds[1]);
+        minZ = Math.min(minZ, bounds[2]);
+        maxX = Math.max(maxX, bounds[3]);
+        maxY = Math.max(maxY, bounds[4]);
+        maxZ = Math.max(maxZ, bounds[5]);
+        float extentX = maxX - minX;
+        float extentY = maxY - minY;
+        float extentZ = maxZ - minZ;
+        int axis;
+        if (extentY >= extentX && extentY >= extentZ) {
+            axis = 1;
+        } else if (extentX >= extentZ) {
+            axis = 0;
+        } else {
+            axis = 2;
+        }
+        float min = axis == 0 ? minX : axis == 1 ? minY : minZ;
+        float extent = Math.max(1.0E-4F, axis == 0 ? extentX : axis == 1 ? extentY : extentZ);
+        float[] result = new float[]{axis, min, extent};
+        BLADE_COORDS.put(overlay, result);
+        return result;
+    }
+
+    /** {@return {minX, minY, minZ, maxX, maxY, maxZ} of one quad list}. */
+    private static float[] bounds(List<BakedQuad> quads) {
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        for (BakedQuad quad : quads) {
+            int[] data = quad.getVertices();
+            int stride = data.length / 4;
+            for (int i = 0; i < 4; i++) {
+                int offset = i * stride;
+                float x = Float.intBitsToFloat(data[offset]);
+                float y = Float.intBitsToFloat(data[offset + 1]);
+                float z = Float.intBitsToFloat(data[offset + 2]);
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                minZ = Math.min(minZ, z);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+                maxZ = Math.max(maxZ, z);
+            }
+        }
+        return new float[]{minX, minY, minZ, maxX, maxY, maxZ};
+    }
+
+    /** {@return the normalised position along the blade, 0..1}. */
+    private static float bladeCoord(float[] coords, float x, float y, float z) {
+        float value = switch ((int) coords[0]) {
+            case 0 -> x;
+            case 1 -> y;
+            default -> z;
+        };
+        return Math.max(0.0F, Math.min(1.0F, (value - coords[1]) / coords[2]));
+    }
+
+    /**
+     * {@return the flowing colour at one blade position}. The hue moves around the weapon's colour on
+     * the hue ring (two harmonics keeps the bands organic), and the brightness follows the same wave
+     * so an uncoloured blade still shows the flow.
+     */
+    private static float[] flowColor(float[] hsv, float bladeCoord, double seconds) {
+        double phase = (bladeCoord * FLOW_CYCLES + seconds * FLOW_SPEED) * Math.PI * 2.0D;
+        float wave = (float) Math.sin(phase);
+        float hue = hsv[0] + FLOW_HUE * (wave + 0.35F * (float) Math.sin(phase * 2.0D - 1.1D));
+        float value = hsv[2] * (1.0F + FLOW_BRIGHTNESS * wave);
+        return hsvToRgb(hue, hsv[1], Math.max(0.0F, Math.min(1.0F, value)));
+    }
+
+    private static float[] rgbToHsv(float[] rgb) {
+        float r = rgb[0];
+        float g = rgb[1];
+        float b = rgb[2];
+        float max = Math.max(r, Math.max(g, b));
+        float min = Math.min(r, Math.min(g, b));
+        float delta = max - min;
+        float hue;
+        if (delta == 0.0F) {
+            hue = 0.0F;
+        } else if (max == r) {
+            hue = 60.0F * (((g - b) / delta) % 6.0F);
+        } else if (max == g) {
+            hue = 60.0F * (((b - r) / delta) + 2.0F);
+        } else {
+            hue = 60.0F * (((r - g) / delta) + 4.0F);
+        }
+        if (hue < 0.0F) {
+            hue += 360.0F;
+        }
+        float saturation = max == 0.0F ? 0.0F : delta / max;
+        return new float[]{hue, saturation, max};
+    }
+
+    private static float[] hsvToRgb(float hue, float saturation, float value) {
+        float h = ((hue % 360.0F) + 360.0F) % 360.0F / 60.0F;
+        int sector = ((int) Math.floor(h)) % 6;
+        float f = h - (float) Math.floor(h);
+        float p = value * (1.0F - saturation);
+        float q = value * (1.0F - saturation * f);
+        float t = value * (1.0F - saturation * (1.0F - f));
+        float r;
+        float g;
+        float b;
+        switch (sector) {
+            case 0 -> {
+                r = value;
+                g = t;
+                b = p;
+            }
+            case 1 -> {
+                r = q;
+                g = value;
+                b = p;
+            }
+            case 2 -> {
+                r = p;
+                g = value;
+                b = t;
+            }
+            case 3 -> {
+                r = p;
+                g = q;
+                b = value;
+            }
+            case 4 -> {
+                r = t;
+                g = p;
+                b = value;
+            }
+            default -> {
+                r = value;
+                g = p;
+                b = q;
+            }
+        }
+        return new float[]{r, g, b};
     }
 
     /**
@@ -297,15 +525,6 @@ public final class WeaponGlow {
         for (BakedQuad quad : quads) {
             buffer.putBulkData(pose, quad, tint[0], tint[1], tint[2], alpha,
                     packedLight, OverlayTexture.NO_OVERLAY);
-        }
-    }
-
-    private static void writeQuads(VertexConsumer buffer, PoseStack.Pose pose, java.util.List<BakedQuad> quads,
-                                   float[] tint, float alpha) {
-        for (BakedQuad quad : quads) {
-            // Full-bright lightmap + no overlay: the glow is independent of world light and damage.
-            buffer.putBulkData(pose, quad, tint[0], tint[1], tint[2], alpha,
-                    LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
         }
     }
 }
