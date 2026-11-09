@@ -44,7 +44,7 @@ public record WeaponDefinition(
         ELYTRA_SLASH,
         /** Right-click blocking with the parry pose. */
         BLOCK,
-        /** Airborne jump slam (跳劈). */
+        /** Jump slam during the falling phase of a jump (跳劈). */
         JUMP_ATTACK
     }
 

@@ -46,6 +46,9 @@ public final class BlockPose {
     private static final Set<String> TWO_HANDED = Set.of(
             "claymore", "twinblade", "doubleaxe", "hengdao", "spear");
 
+    /** Extra height of the stationary blocking pose above the grounded position, in model units. */
+    private static final float STATIONARY_LIFT = 1.0F;
+
     private static final Map<UUID, Float> PROGRESS = new HashMap<>();
     private static final Map<PlayerModel<?>, float[]> RENDER_BENDS = new WeakHashMap<>();
     private static final Map<UUID, Float> LEG_BLEND = new HashMap<>();
@@ -173,8 +176,9 @@ public final class BlockPose {
         // Lower the whole blocking pose so the authored file-leg soles touch the ground (model
         // bottom = y 24). The offset follows the file-leg pose; while walking the vanilla legs swing
         // and a full offset would make the whole torso bob up and down, so weight it by the file-leg
-        // blend: stationary blocking is grounded, walking keeps the torso steady.
-        float footOffset = groundOffset(model) * fileLegWeight;
+        // blend: stationary blocking is grounded, walking keeps the torso steady. The stationary
+        // pose is then raised by a tiny lift so the whole blocking figure sits a little higher.
+        float footOffset = (groundOffset(model) - STATIONARY_LIFT) * fileLegWeight;
         if (Math.abs(footOffset) > 0.001F) {
             shiftY(model.body, footOffset);
             shiftY(model.head, footOffset);

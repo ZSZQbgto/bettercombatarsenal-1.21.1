@@ -88,8 +88,6 @@ public final class FallSlamClient {
     private static boolean triggeringAttack;
     private static boolean serverWindup;
     private static boolean slamReported;
-    private static boolean afterRelease;
-    private static double fallStartY = Double.NaN;
 
     private FallSlamClient() {
     }
@@ -200,17 +198,20 @@ public final class FallSlamClient {
                 || !JumpAttackHandler.isHoldingAbilityWeapon(player, Ability.FALL_SLASH)) {
             return;
         }
-        if (Double.isNaN(fallStartY)) {
-            fallStartY = afterRelease ? player.getY() : player.getY() + player.fallDistance;
-            afterRelease = false;
+        // A real jump that is still inside the short-fall jump-slam window keeps its attack input:
+        // the falling slash must not swallow the jump-slam attack (and its claymore third-attack
+        // animation) merely because the ground is more than five blocks below the player.
+        if (phase == Phase.IDLE && player.fallDistance <= MIN_FALL_BLOCKS
+                && JumpAttackHandler.isJumpAttackAirborne(player)) {
+            return;
         }
-        boolean longFall = fallStartY - player.getY() > MIN_FALL_BLOCKS;
+        // The fall height is always measured from the position where this fall started (the vanilla
+        // fall distance), not from the last attack press: cancelling the windup or re-pressing must
+        // not reset the accumulated fall. A descending player more than five blocks above the ground
+        // will still fall far enough for a falling slash, so that case is treated as a long fall from
+        // the press on and Better Combat's own airborne jump-slam animation is suppressed.
+        boolean longFall = player.fallDistance > MIN_FALL_BLOCKS;
         if (!longFall) {
-            // A descending player that is more than five blocks above the ground will fall far
-            // enough for a falling slash. From the press on, treat the input as a falling-slash hold
-            // instead of letting Better Combat start its own airborne jump-slam animation; the
-            // windup then starts after the 0.15 s long press and no Better Combat jump-slam animation
-            // plays.
             longFall = player.getDeltaMovement().y <= 0.0D
                     && heightToGround(player) > MIN_FALL_BLOCKS;
         }
@@ -281,9 +282,6 @@ public final class FallSlamClient {
         commitTicks = 0;
         slamReported = false;
         glidingSlash = true;
-        afterRelease = false;
-        // Keep the fall origin for the height-scaled damage (elytra descent counts as the fall).
-        fallStartY = player.getY() + player.fallDistance;
         holdFilters();
         FallSlamState.attackLock = false;
         FallSlamAnimation.clearBetterCombatSwing();
@@ -400,10 +398,11 @@ public final class FallSlamClient {
             // The slam just resumed from its frozen 1/3 pose: play the claymore's third attack swing
             // sound now so it matches the actual chopping animation (no longer at the animation end).
             send(new FallSlamStrikePayload());
-            double fall = Double.isNaN(fallStartY)
-                    ? Math.max(0.0D, player.fallDistance)
-                    : Math.max(0.0D, fallStartY - player.getY());
-            send(new FallSlamPayload((float) fall));
+            // The fall height always counts from the start of the current fall, including any part
+            // of it spent with the windup cancelled: the landing estimate is the fall distance so
+            // far (vanilla fall distance) plus the distance still to the ground.
+            double totalFall = Math.max(0.0D, player.fallDistance) + heightToGround(player);
+            send(new FallSlamPayload((float) totalFall));
         }
     }
 
@@ -439,9 +438,8 @@ public final class FallSlamClient {
         resetState();
         clearFilters();
         setServerWindup(false);
-        stopWind();
-        afterRelease = true;
-        fallStartY = Double.NaN;
+        // The wind sound is not stopped here: it belongs to the actual fall, so it must keep
+        // playing (without restarting) until the fall itself ends (see updateWind).
         // Keep the key edge in sync: if attack is still held after the lock, it must not count as a
         // new press (otherwise the elytra slash would chain-strike while the key stays down).
         wasAttackDown = attackKeyDown();
@@ -455,6 +453,7 @@ public final class FallSlamClient {
             FallSlamAnimation.clearBetterCombatSwing();
         }
         clearSlam();
+        stopWind();
     }
 
     private static void shortTapAttack(Minecraft minecraft, LocalPlayer player) {        // Let this one normal attack through the filters: Better Combat may pick its airborne slam
@@ -484,9 +483,8 @@ public final class FallSlamClient {
         resetState();
         clearFilters();
         setServerWindup(false);
-        stopWind();
-        afterRelease = true;
-        fallStartY = Double.NaN;
+        // Do not stop the wind here: cancelling the windup does not end the fall, so the same wind
+        // instance keeps playing instead of restarting from silence on the next attack press.
         wasAttackDown = attackKeyDown();
         keyDownTicks = 0;
     }
@@ -498,8 +496,6 @@ public final class FallSlamClient {
         FallSlamAnimation.reset();
         stopWind();
         serverWindup = false;
-        afterRelease = true;
-        fallStartY = Double.NaN;
         wasAttackDown = false;
         keyDownTicks = 0;
     }
@@ -545,20 +541,21 @@ public final class FallSlamClient {
      * Keeps the looping elytra gliding wind alive while the player is falling. Volume and pitch are
      * updated by {@link FallSlamWindSound} from the current fall speed.
      *
-     * <p>Active during the whole falling-slash descent, and also for any other real fall of more than
-     * three blocks so the wind matches the "falling" state instead of only the slash states. Slow
-     * Falling counts as a gentle descent, so it does not play the wind.</p>
+     * <p>The wind starts once the player is in a real fall of more than three blocks (or inside the
+     * falling-slash windup) and then keeps playing for the rest of that fall: cancelling or
+     * re-pressing the attack, or finishing the slam, must not restart it. Slow Falling counts as a
+     * gentle descent, so it does not play the wind.</p>
      */
     private static void updateWind(LocalPlayer player) {
-        boolean falling = !player.onGround() && !player.getAbilities().flying
-                && !player.isFallFlying() && !player.isInWater()
-                && !player.hasEffect(MobEffects.SLOW_FALLING)
-                && (phase != Phase.IDLE || player.fallDistance > 3.0F);
-        if (!falling) {
+        boolean fallEnded = player.onGround() || player.getAbilities().flying
+                || player.isFallFlying() || player.isInWater()
+                || player.hasEffect(MobEffects.SLOW_FALLING);
+        if (fallEnded) {
             stopWind();
             return;
         }
-        if (windSound == null || windSound.isStopped()) {
+        boolean started = windSound != null && !windSound.isStopped();
+        if (!started && (phase != Phase.IDLE || player.fallDistance > 3.0F)) {
             windSound = new FallSlamWindSound(player);
             Minecraft.getInstance().getSoundManager().play(windSound);
         }

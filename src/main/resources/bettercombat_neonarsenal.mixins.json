@@ -15,7 +15,6 @@
     "PlayerBlockPoseMixin",
     "ElytraLayerBlockPoseMixin",
     "ElytraModelBlockPoseMixin",
-    "CapeLayerBlockPoseMixin",
     "ClientLevelParrySoundMixin",
     "LocalPlayerSneakMixin",
     "BlockBendRenderMixin",

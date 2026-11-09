@@ -21,8 +21,10 @@ import net.minecraft.world.item.ItemStack;
  *
  * <p>Better Combat has no "player is airborne" attack condition, so a small mixin on its attack
  * selection ({@code PlayerAttackHelper#getCurrentAttack}) calls into this class. When the player is
- * airborne and holds one of our weapons, every weapon plays the <b>claymore's last attack</b> (the
- * overhead slam) instead of its own attack, while the swing/impact sounds stay the weapon's own.
+ * <b>falling</b> after a jump and holds one of our weapons, every weapon plays the <b>claymore's last
+ * attack</b> (the overhead slam) instead of its own attack, while the swing/impact sounds stay the
+ * weapon's own. Like a vanilla critical hit, the slam only counts once the fall has actually started:
+ * the rising phase of the jump does not trigger it.
  * The combo counter is pushed to {@code -1} so Better Combat's next increment lands on {@code 0}:
  * every jump attack therefore interrupts the chain and the next ground attack starts from the first
  * combo step.</p>
@@ -67,15 +69,64 @@ public final class JumpAttackHandler {
     /** Wall-clock time (ms) until which jumping is blocked after a jump attack (first cooldown half). */
     private static final Map<UUID, Long> JUMP_BLOCK_UNTIL = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Players that have jumped and have not landed yet; jump attacks are allowed for this whole window. */
+    /**
+     * Players that have jumped and have not landed yet. The jump slam is only allowed during the
+     * falling phase of this window (fall distance {@code > 0}), like a vanilla critical hit.
+     */
     private static final java.util.Set<UUID> JUMP_AIRBORNE =
             java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Better Combat animation of the claymore's third (overhead slam) attack. */
+    private static final String JUMP_SLAM_ANIMATION = "bettercombat:two_handed_slam";
+
+    /**
+     * Server-side wall-clock deadline (ms) of the jump-slam animation the client reported in its
+     * attack-animation packet. Better Combat starts the swing (and its animation) on the client
+     * immediately, but sends the attack request only at the end of the upswing; by then the server's
+     * own state may have moved on (landed or fallen past five blocks), which used to make the server
+     * pick a normal attack while the client showed the slam animation. The server therefore selects
+     * the same slam the client animated.
+     */
+    private static final Map<UUID, Long> CLIENT_SLAM_UNTIL_MS =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     private static Method attackCooldownMethod;
 
     private static boolean logged;
 
     private JumpAttackHandler() {
+    }
+
+    /**
+     * Server-side hook for the client's attack-animation packet: remembers that this player just
+     * started the jump-slam animation, so the attack request that arrives at the end of the upswing
+     * is resolved to the same slam attack.
+     *
+     * @param player       the attacking player (server side only)
+     * @param animation    the animation name the client started
+     * @param upswingTicks the upswing length of that attack, in ticks
+     */
+    public static void onClientAttackAnimation(Player player, String animation, int upswingTicks) {
+        if (player == null || player.level().isClientSide()) {
+            return;
+        }
+        UUID id = player.getUUID();
+        boolean slam = JUMP_SLAM_ANIMATION.equals(animation)
+                && !player.onGround()
+                && !player.getAbilities().flying
+                && holdsJumpSlamWeapon(player);
+        if (slam) {
+            long lifeTicks = Math.max(5, upswingTicks) + 10L;
+            CLIENT_SLAM_UNTIL_MS.put(id, System.currentTimeMillis() + lifeTicks * 50L);
+        } else {
+            CLIENT_SLAM_UNTIL_MS.remove(id);
+        }
+    }
+
+    /** {@return whether either hand holds an arsenal weapon with the jump-attack skill}. */
+    private static boolean holdsJumpSlamWeapon(Player player) {
+        return hasAbility(player.getMainHandItem(), com.zszq.neonarsenal.weapon.WeaponDefinition.Ability.JUMP_ATTACK)
+                || hasAbility(player.getOffhandItem(), com.zszq.neonarsenal.weapon.WeaponDefinition.Ability.JUMP_ATTACK);
     }
 
     /**
@@ -86,40 +137,58 @@ public final class JumpAttackHandler {
      * @param comboCount Better Combat's current combo counter
      */
     public static Object forPlayer(Player player, int comboCount) {
-        if (player == null || player.onGround() || player.getAbilities().flying) {
-            // Creative flight attacks use the normal ground attack, not the jump slam.
+        if (player == null) {
             return null;
         }
-        if (player.isFallFlying()) {
-            // Elytra gliding keeps the normal ground-style attack. The elytra slash (long attack
-            // press) is driven by FallSlamClient; a jump slam must never fire while gliding.
-            return null;
-        }
-        // Vanilla-style airborne attack conditions: any time between jumping and landing counts,
-        // including while falling. Climbing, swimming, riding and blindness are excluded just like
-        // vanilla critical hits.
-        if (!isJumpAttackAirborne(player)) {
-            return null;
-        }
-        if (player.fallDistance > 5.0F) {
-            // A sustained fall belongs to the falling slash (for its weapons) or to plain ground-style
-            // attacks (for every other weapon); it must not become a jump slam.
-            return null;
-        }
-        if (player.onClimbable() || player.isInWater() || player.isPassenger()
-                || player.hasEffect(MobEffects.BLINDNESS)) {
-            return null;
-        }
-        // Only actual attack input may turn into a jump attack. Better Combat also queries the
-        // current attack for animation/pose code while the player is merely jumping; without this
-        // guard a normal jump would already start the jump-attack cooldown and block jumping.
-        if (player.level().isClientSide() && !isAttackInputActive(player)) {
-            return null;
-        }
-        if (player.level().isClientSide()
-                && com.zszq.neonarsenal.compat.FallSlamState.allowNormalAttack) {
-            // A short tap during a long fall is a normal attack, not the jump slam.
-            return null;
+        if (player.level().isClientSide()) {
+            // Client: the visible slam animation is chosen here, at the start of the swing.
+            if (player.onGround() || player.getAbilities().flying) {
+                // Creative flight attacks use the normal ground attack, not the jump slam.
+                return null;
+            }
+            if (player.isFallFlying()) {
+                // Elytra gliding keeps the normal ground-style attack. The elytra slash (long attack
+                // press) is driven by FallSlamClient; a jump slam must never fire while gliding.
+                return null;
+            }
+            // Jump-slam window: airborne after a real jump, before landing. The whole jump counts
+            // because Better Combat picks the attack - and therefore the swing animation - at the
+            // start of the swing, while the hit lands only after the upswing (during the fall, like
+            // a vanilla critical hit). Climbing, swimming, riding and blindness are excluded just
+            // like vanilla critical hits.
+            if (!isJumpAttackAirborne(player)) {
+                return null;
+            }
+            if (player.fallDistance > 5.0F) {
+                // A sustained fall belongs to the falling slash (for its weapons) or to plain
+                // ground-style attacks (for every other weapon); it must not become a jump slam.
+                return null;
+            }
+            if (player.onClimbable() || player.isInWater() || player.isPassenger()
+                    || player.hasEffect(MobEffects.BLINDNESS)) {
+                return null;
+            }
+            // Only actual attack input may turn into a jump attack. Better Combat also queries the
+            // current attack for animation/pose code while the player is merely jumping; without this
+            // guard a normal jump would already start the jump-attack cooldown and block jumping.
+            if (!isAttackInputActive(player)) {
+                return null;
+            }
+            if (com.zszq.neonarsenal.compat.FallSlamState.allowNormalAttack) {
+                // A short tap during a long fall is a normal attack, not the jump slam.
+                return null;
+            }
+        } else {
+            // Server: follow the animation the client actually started (see onClientAttackAnimation),
+            // because the request arrives after the upswing and the player may have landed by then.
+            Long until = CLIENT_SLAM_UNTIL_MS.get(player.getUUID());
+            if (until == null) {
+                return null;
+            }
+            if (System.currentTimeMillis() > until) {
+                CLIENT_SLAM_UNTIL_MS.remove(player.getUUID());
+                return null;
+            }
         }
         init();
         if (!ready) {
@@ -167,7 +236,7 @@ public final class JumpAttackHandler {
             if (!logged) {
                 logged = true;
                 NeonArsenal.LOGGER.info(
-                        "Jump attack enabled: airborne attacks play the claymore slam with the weapon's own sound");
+                        "Jump attack enabled: falling jump attacks play the claymore slam with the weapon's own sound");
             }
             if (player.level().isClientSide()) {
                 // Only the client tracks the jump cooldown; Better Combat also queries the current
@@ -244,8 +313,8 @@ public final class JumpAttackHandler {
     }
 
     /**
-     * Records actual jumps so only a real jump attack (not merely attacking while falling) starts
-     * the jump cooldown.
+     * Records actual jumps so only a real jump attack (a swing started during a jump, not merely
+     * attacking while falling) starts the jump cooldown.
      */
     public static void onLivingJump(net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player) {
@@ -261,16 +330,28 @@ public final class JumpAttackHandler {
         }
     }
 
-    /** {@return true from a real jump until landing (vanilla-style airborne attack window)}. */
+    /**
+     * {@return whether the player is inside the jump-slam window: airborne after a real jump, from
+     * the jump until landing}.
+     *
+     * <p>The whole jump belongs to the window because Better Combat fixes the attack (and with it
+     * the swing animation) when the swing <b>starts</b>, while the hit itself is applied only after
+     * the upswing delay - which for a jump is during the falling phase, like a vanilla critical hit.
+     * Choosing the slam only once the fall has started would leave the swing that was started during
+     * the rise with the weapon's normal animation and desync the hit from the animation. Attacks
+     * that merely take place while falling without a jump are not part of this window.</p>
+     */
     public static boolean isJumpAttackAirborne(Player player) {
-        return player != null && !player.onGround() && JUMP_AIRBORNE.contains(player.getUUID());
+        return player != null
+                && !player.onGround()
+                && JUMP_AIRBORNE.contains(player.getUUID());
     }
 
     /**
      * Starts the jump-attack cooldown. Its length follows the weapon's Better Combat attack cooldown
-     * (at least 10 ticks). Only the <b>first half</b> of that cooldown blocks jumping, and only if
-     * the player actually jumped recently (an attack while simply falling is not a jump attack and
-     * never blocks jumping). Attacks are never affected.
+     * (at least 10 ticks). Only the <b>first half</b> of that cooldown blocks jumping, and only when
+     * the jump slam happened during a real jump (an attack while simply falling is not a jump attack
+     * and never blocks jumping). Attacks are never affected.
      */
     public static void markJumpAttack(Player player) {
         if (player == null) {

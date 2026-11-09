@@ -208,11 +208,11 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 4. 同一目标可同时处于「被点燃 + 白色闪烁 + 被传送/僵直」状态；伤害、击退、传送、僵直分别独立结算、互不覆盖。
 5. 苦力怕标记目标在引信结束前死亡时，立即在**死亡位置**爆炸（不会因为目标死亡而失效）。
 6. 结算顺序为 **火焰点燃 → 苦力怕标记 → 紫颂传送**，但顺序不影响最终结果；冷却各自开始计时。
-7. 跳劈击退（击退 V）与苦力怕爆炸击退（击退 III）分别结算，不互相覆盖。
+7. 跳劈击退（击退 I）与苦力怕爆炸击退（击退 III）分别结算，不互相覆盖。
 8. **双持限制**：只有主手武器的锻刃层参与结算。副手攻击（Better Combat 判定为 off-hand）不触发任何锻刃效果，也不消耗/缩放主手锋利度；主手攻击不受副手武器影响。渲染与结算分离：刀光、火花粒子、刀刃光效按各自手持武器分别渲染（副手武器用副手自己的颜色，不套用主手）。
 2. 锋利度：锻刃不改变锋利度；命中照常消耗 1 点锋利度；刀光亮度与粒子密度 = 锋利度系数（每损失 10% −20%，≥50% 归零）× 锻刃颜色（颜色只改色相，不改变亮度系数）。
 3. 伤害：锋利度倍率作用于事件伤害（0.75–1.0）；锻刃本身不额外加成伤害（苦力怕爆炸为独立伤害）。
-4. 跳劈击退（击退 V）与苦力怕爆炸击退（击退 III）互不叠加，各自结算。
+4. 跳劈击退（击退 I）与苦力怕爆炸击退（击退 III）互不叠加，各自结算。
 
 ## 6.2 客户端设置（模组列表滑条）
 
@@ -249,7 +249,7 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 ## 8. 格挡（Blocking）
 
 - 手持任意本模组武器长按右键进入格挡；`SharpnessWeaponItem#use` 开始物品使用，松开即停止。
-- 动画：客户端 `BlockPose` 读取 `assets/bettercombat_neonarsenal/animations/two_handed_parry.json` / `dual_wield_parry.json`（已同步 resourcepacks 最新版本），在 `PlayerModel#setupAnim` 末尾混合；进入/退出各 0.1 秒。单持武器与双手武器使用双手姿态；仅当副手也持本模组武器（真正双持）时使用双持姿态。slim 皮肤补偿手臂枢轴 0.5 单位偏移；躯干/身体/头部/手部只使用动作文件（不叠加其它动画）；手臂应用动作文件的 `right_arm/left_arm` 旋转；格挡时在 `AgeableListModel.renderToBuffer` 前由 `BlockBendRenderMixin` 调用 `FpaBend.blend`，读取 `right_arm_bend/left_arm_bend` 第一分量（**正 X**，修正先前反向）作为关节角，以进度作为权重叠加到当前 bend；非格挡不写 bend；躯干旋转后重新贴合腰部（y=12），头部吸附到躯干顶部并下移 0.5 单位贴住身体；格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；不强制 crouch、不改相机；，手臂按躯干旋转 + 最终位移的完整变换定位，避免身体、头手与腿的间隙；腿部完全不参与格挡、保持原版；外层皮肤部件（袖子、外套、裤腿与头部外层 `hat`）在姿态与接地偏移之后重新 `copyFrom` 同步——头部外层此前漏同步，导致格挡时外层皮肤（含 3D 皮肤层 compatibilityMode 注入到 `hat` 的 3D 网格）停在原地，现已修正；披风（`CapeLayer`）与鞘翅一样在渲染时叠加 `body` 变换并在返回时成对 `pop`，使其跟随躯干前倾且不影响其后图层。格挡时屏蔽潜行：格挡期间每 tick 强制 `setShiftKeyDown(false)` 且客户端 setPose(STANDING)（服务端/客户端），相机/眼高保持站立，松开后恢复普通潜行输入。格挡期间禁止疾跑，正在疾跑会立即中断；同时屏蔽潜行。格挡优先级最高：`use` 清除物品冷却，不受攻击/切换武器冷却影响；格挡时取消左键攻击与挖掘事件。格挡判定沿用原版受击路径但限定前方 210°（±105°）：每次该范围内会生效的伤害事件触发一次成功格挡，消耗 ceil(伤害×10%) 锋利度、播放音效、格挡期间取消所有伤害（持续无敌）；松开格挡结束后额外给予 4 tick（0.2 秒）无敌；清除受击红闪、在武器位置发送 14 颗火星粒子（无需烈焰粉；颜色取 `Forge.displayColor`，锻入发光墨囊时粒子 full-bright 发光，否则使用世界光照）；音效与粒子按玩家持久数据记录下一次可用时间，两次之间强制随机 0.3–0.8 秒间隔（6–16 tick，每次重掷），避免史莱姆等高频率攻击逐 tick 触发。无额外击退抗性属性；环境伤害与背后/侧面伤害不受格挡。姿态 mixin 使用较低优先级，确保在其它玩家动画的 TAIL 注入之后应用，手部动作为**加法叠加**（不替换其它动作），格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；不强制 crouch、不改相机；渲染。
+- 动画：客户端 `BlockPose` 读取 `assets/bettercombat_neonarsenal/animations/two_handed_parry.json` / `dual_wield_parry.json`（已同步 resourcepacks 最新版本），在 `PlayerModel#setupAnim` 末尾混合；进入/退出各 0.1 秒。单持武器与双手武器使用双手姿态；仅当副手也持本模组武器（真正双持）时使用双持姿态。slim 皮肤补偿手臂枢轴 0.5 单位偏移；躯干/身体/头部/手部只使用动作文件（不叠加其它动画）；手臂应用动作文件的 `right_arm/left_arm` 旋转；格挡时在 `AgeableListModel.renderToBuffer` 前由 `BlockBendRenderMixin` 调用 `FpaBend.blend`，读取 `right_arm_bend/left_arm_bend` 第一分量（**正 X**，修正先前反向）作为关节角，以进度作为权重叠加到当前 bend；非格挡不写 bend；躯干旋转后重新贴合腰部（y=12），头部吸附到躯干顶部并下移 0.5 单位贴住身体；格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；静止时全身在接地偏移基础上再上抬 1 个模型单位（约 1 像素）；不强制 crouch、不改相机；，手臂按躯干旋转 + 最终位移的完整变换定位，避免身体、头手与腿的间隙；腿部完全不参与格挡、保持原版；外层皮肤部件（袖子、外套、裤腿与头部外层 `hat`）在姿态与接地偏移之后重新 `copyFrom` 同步——头部外层此前漏同步，导致格挡时外层皮肤（含 3D 皮肤层 compatibilityMode 注入到 `hat` 的 3D 网格）停在原地，现已修正；格挡时屏蔽潜行：格挡期间每 tick 强制 `setShiftKeyDown(false)` 且客户端 setPose(STANDING)（服务端/客户端），相机/眼高保持站立，松开后恢复普通潜行输入。格挡期间禁止疾跑，正在疾跑会立即中断；同时屏蔽潜行。格挡优先级最高：`use` 清除物品冷却，不受攻击/切换武器冷却影响；格挡时取消左键攻击与挖掘事件。格挡判定沿用原版受击路径但限定前方 210°（±105°）：每次该范围内会生效的伤害事件触发一次成功格挡，消耗 ceil(伤害×10%) 锋利度、播放音效、格挡期间取消所有伤害（持续无敌）；松开格挡结束后额外给予 4 tick（0.2 秒）无敌；清除受击红闪、在武器位置发送 14 颗火星粒子（无需烈焰粉；颜色取 `Forge.displayColor`，锻入发光墨囊时粒子 full-bright 发光，否则使用世界光照）；音效与粒子按玩家持久数据记录下一次可用时间，两次之间强制随机 0.3–0.8 秒间隔（6–16 tick，每次重掷），避免史莱姆等高频率攻击逐 tick 触发。无额外击退抗性属性；环境伤害与背后/侧面伤害不受格挡。姿态 mixin 使用较低优先级，确保在其它玩家动画的 TAIL 注入之后应用，手部动作为**加法叠加**（不替换其它动作），格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；静止时全身在接地偏移基础上再上抬 1 个模型单位（约 1 像素）；不强制 crouch、不改相机；渲染。
 - 判定：服务端 `LivingIncomingDamageEvent` 中若玩家正在使用本模组武器，则取消本次攻击伤害，调用 `Sharpness.consume` 消耗 1 点，并播放 `bettercombat_neonarsenal:parry`；播放时客户端通过监听本地 parry 音效触发手部/武器 2px、0.1s 颤动与视角轻微颤动（不再使用自定义网络包），服务端给玩家一个约 1/4 格的后退推力；取消伤害的同时给予 4 tick 受击无敌，避免同一攻击逐 tick 重复触发音效。
 - 连招：`PlayerTickEvent` 记录格挡开始时间；松开时若持续 >40 tick（2 秒）则通过反射调用 `PlayerAttackProperties.setComboCount(player, -1)` 打断连招，≤40 tick 保持连招。
 
@@ -257,13 +257,13 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 
 右键优先级：工作方块（getMenuProvider != null）且玩家与方块之间（水平线段投影 t∈[0,1]、横向距离≤1.5、垂直≤2.5）存在 Enemy → 格挡；否则工作方块正常交互；非工作方块格挡。
 
-跳劈：创造飞行不触发；下落>5格时首次攻击输入被 FallSlamClient 拦截，距地面<=4格自动 startAttack；FallSlamHandler 对命中伤害乘 1+fallDistance*0.05，落地时烈焰粉锻刃迸发 80 颗粒子并播放 parry 音效。
+跳劈：起跳后至落地前触发（整个跳跃窗口，保证阔剑第三段下劈动画在挥砍开始时即播放），下落高度 **≤5 格**（超过 5 格归下落斩击或普通攻击）。Better Combat 在客户端立即开始挥砍并播放动画，但攻击请求要等挥摆结束才发到服务端；服务端按客户端上报的跳劈动画选择同一套跳劈攻击，避免“客户端播下劈动画、服务端结算普通攻击”导致伤害与音效和动画不同步。创造飞行不触发；下落>5格时首次攻击输入被 FallSlamClient 拦截，距地面<=4格自动 startAttack；FallSlamHandler 对命中伤害乘 1+fallDistance*0.05，落地时烈焰粉锻刃迸发 80 颗粒子并播放 parry 音效。
 
-下落跳劈需持续按住攻击键；松开重置 fallStartY 与 pending，必须再次按住重新累计 >5 格。BC 攻击请求到达时 FallSlamHandler.markSlam；LivingFallEvent：有 slam 标记时取消原版摔落，<10格免伤，>10格按 floor((d-10)/3)*3 扣血并 clamp 到 1 HP；正常下落无标记不受影响。
+下落斩击需在本次下落中按住攻击键（长按 0.15 秒）；**下落高度始终从本次下落起点累计**（客户端直接使用原版 `fallDistance`，不再使用 `fallStartY`/`afterRelease`），中途松开只取消当前蓄力、不重置已累计高度，再次按住即按同一次下落继续判定。风声音效在本次下落期间持续播放：取消/重按斩击或完成斩击都不会中断或重启风声，只在落地/入水/缓降/滑翔等真正结束下落时停止。BC 攻击请求到达时 FallSlamHandler.markSlam；LivingFallEvent：有 slam 标记时取消原版摔落，<10 格免伤，>10 格按 `floor((d-10)/3)` 扣血（每多 3 格 1 点）并 clamp 到 1 HP；最终未触发下落斩击的普通下落按原版摔落结算。注意服务端可能先标记落地、`LivingFallEvent` 晚 1~2 tick 才到，PENDING 会保留到事件到达或超时，落地伤害只结算一次。
 
 格挡姿态整体接地：groundOffset = 24 - min(leg.y + 12*cos(xRot) - 2*|sin(xRot)|)，随后将 body/head/arms/legs/sleeves/jacket/pants 全部 y += offset，使脚底接触模型地面 y=24。
 
-修复：等待期间 FallSlamState.waitingForSlam=true，BC getCurrentAttack 返回 null，避免按住攻击键每 tick 重播跳劈；首次按下 fallStartY=Y+fallDistance，松手后 afterRelease=true，再按下从当前 Y 起算。
+修复：等待期间 FallSlamState.waitingForSlam=true，BC getCurrentAttack 返回 null，避免按住攻击键每 tick 重播跳劈；下落高度改用原版 `fallDistance`（从本次下落起点累计），取消/重按不重置。
 
 修复重复跳劈：ClientTickEvent.Pre 中提前更新 FallSlamState.waitingForSlam，确保 BC 在玩家 tick 查询攻击时已看到等待标记；自动触发后 triggered 期间继续抑制，直到落地/松手。
 

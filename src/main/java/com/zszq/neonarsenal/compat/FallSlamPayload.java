@@ -8,7 +8,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/** Client -> server: a falling slash committed with this fall distance, so the server can settle it. */
+/** Client -> server: a falling slash committed with its expected total fall height (fall so far plus
+ * the remaining distance to the ground), so the server can settle it. */
 public record FallSlamPayload(float fallBlocks) implements CustomPacketPayload {
 
     public static final Type<FallSlamPayload> TYPE =

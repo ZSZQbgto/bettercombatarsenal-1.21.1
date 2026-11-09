@@ -35,14 +35,30 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 public final class FallSlamHandler {
 
     private static final Map<UUID, Float> PENDING = new ConcurrentHashMap<>();
+    /** Wall-clock time (ms) at which each pending falling slash was committed. */
+    private static final Map<UUID, Long> PENDING_SINCE = new ConcurrentHashMap<>();
     private static final Map<UUID, Float> LANDED_FALL = new ConcurrentHashMap<>();
     private static final Map<UUID, Float> FALL_IMPACT = new ConcurrentHashMap<>();
+    /** Players whose landing hit has already been settled (so it is applied only once). */
+    private static final java.util.Set<UUID> SETTLED = ConcurrentHashMap.newKeySet();
+    /** Player tick at which the landing hit was settled, used to match the delayed fall event. */
+    private static final Map<UUID, Integer> SETTLED_AT = new ConcurrentHashMap<>();
     private static final java.util.Set<UUID> SLAM_ACTIVE = ConcurrentHashMap.newKeySet();
     private static final java.util.Set<UUID> WINDUP_ACTIVE = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, Integer> WINDUP_GROUNDED = new ConcurrentHashMap<>();
 
     /** Safety net: if the client never restores the flag (crash, stuck state), do it after 5 s. */
     private static final int MAX_GROUNDED_WINDUP_TICKS = 100;
+
+    /**
+     * The server can flag the player as on-ground a tick or two before {@code LivingFallEvent}
+     * arrives (the movement packet is validated/skipped while a chunk is still loading), so the
+     * pending falling slash must survive that delay instead of being consumed by the player tick.
+     */
+    private static final long FALL_EVENT_TIMEOUT_MS = 5000L;
+
+    /** How many player ticks after settling the delayed landing fall event is still accepted. */
+    private static final int DELAYED_EVENT_TICKS = 40;
 
     private FallSlamHandler() {
     }
@@ -70,7 +86,12 @@ public final class FallSlamHandler {
             return;
         }
         PENDING.put(player.getUUID(), fall);
+        PENDING_SINCE.put(player.getUUID(), System.currentTimeMillis());
         SLAM_ACTIVE.add(player.getUUID());
+        // A fresh slam starts a new landing settlement even if the previous one is still settling.
+        SETTLED.remove(player.getUUID());
+        SETTLED_AT.remove(player.getUUID());
+        LANDED_FALL.remove(player.getUUID());
     }
 
     /**
@@ -82,13 +103,25 @@ public final class FallSlamHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        Float pending = PENDING.get(player.getUUID());
-        if (pending == null || !SLAM_ACTIVE.remove(player.getUUID())) {
+        UUID id = player.getUUID();
+        Float pending = PENDING.get(id);
+        if (pending == null) {
+            return;
+        }
+        // Only a real long fall can be a falling-slash landing; a stale marker must not grant
+        // immunity to a later, unrelated small fall.
+        if (event.getDistance() <= 5.0F) {
+            return;
+        }
+        Integer settledAt = SETTLED_AT.get(id);
+        if (settledAt != null && player.tickCount - settledAt > DELAYED_EVENT_TICKS) {
             return;
         }
         // The event carries the real landing fall height; the commit-time estimate is a few blocks short.
         float fall = Math.max(event.getDistance(), pending);
-        LANDED_FALL.put(player.getUUID(), fall);
+        PENDING.remove(id);
+        SLAM_ACTIVE.remove(id);
+        LANDED_FALL.put(id, fall);
         event.setCanceled(true);
         if (fall <= 10.0F) {
             return;
@@ -132,7 +165,12 @@ public final class FallSlamHandler {
         }
     }
 
-    /** Applies the falling-slash damage and landing particles once the player is back on the ground. */
+    /**
+     * Settles the landing hit once and keeps the fall-damage marker alive long enough for
+     * {@code LivingFallEvent}: the server may flag the player on-ground on one tick while the fall
+     * event arrives on a later one, so consuming the pending slam here would skip the fall-damage
+     * rules entirely.
+     */
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (!(player instanceof ServerPlayer serverPlayer)) {
@@ -142,14 +180,59 @@ public final class FallSlamHandler {
         if (!player.onGround()) {
             return;
         }
-        Float fall = PENDING.remove(player.getUUID());
-        SLAM_ACTIVE.remove(player.getUUID());
-        if (fall == null || !(player.level() instanceof ServerLevel level)) {
-            LANDED_FALL.remove(player.getUUID());
+        UUID id = player.getUUID();
+        if (player.isDeadOrDying()) {
+            // Never settle a slam hit after a death (e.g. the player died before the fall event).
+            clearPending(id);
             return;
         }
-        Float landedFall = LANDED_FALL.remove(player.getUUID());
-        float height = landedFall != null ? Math.max(landedFall, fall) : fall;
+        Float pending = PENDING.get(id);
+        Float landed = LANDED_FALL.get(id);
+        if (pending == null && landed == null) {
+            SETTLED.remove(id);
+            SETTLED_AT.remove(id);
+            PENDING_SINCE.remove(id);
+            return;
+        }
+        Long since = PENDING_SINCE.get(id);
+        boolean expired = since != null && System.currentTimeMillis() - since > FALL_EVENT_TIMEOUT_MS;
+        Integer settledAt = SETTLED_AT.get(id);
+        boolean overdue = settledAt != null && player.tickCount - settledAt > DELAYED_EVENT_TICKS;
+        if (expired || overdue) {
+            clearPending(id);
+            return;
+        }
+        if (SETTLED.add(id)) {
+            SETTLED_AT.put(id, player.tickCount);
+            settleSlam(serverPlayer, landed != null ? landed : pending);
+        }
+        if (pending == null) {
+            // The delayed fall event already consumed the marker; only the landing hit was left.
+            LANDED_FALL.remove(id);
+        }
+    }
+
+    /** Drops a pending slam when the player dies mid-fall, so nothing is settled on respawn. */
+    public static void onLivingDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            clearPending(player.getUUID());
+        }
+    }
+
+    private static void clearPending(UUID id) {
+        PENDING.remove(id);
+        PENDING_SINCE.remove(id);
+        SLAM_ACTIVE.remove(id);
+        LANDED_FALL.remove(id);
+        SETTLED.remove(id);
+        SETTLED_AT.remove(id);
+    }
+
+    /** Applies the falling-slash landing hit: sound, area damage and blaze-powder particles. */
+    private static void settleSlam(ServerPlayer player, float height) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
 
         // Landing sound supplied in resourcepacks/sound/landed.mp3.
         playSound(level, player, ModSounds.LANDED.get(), 1.0F, 1.0F);

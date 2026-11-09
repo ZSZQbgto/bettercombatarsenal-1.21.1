@@ -90,6 +90,8 @@ public final class NeonArsenal {
                 com.zszq.neonarsenal.compat.FallSlamHandler::onPlayerTick);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.FallSlamHandler::onLivingFall);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.FallSlamHandler::onLivingDeath);
     }
 
     private void registerPayloads(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {
