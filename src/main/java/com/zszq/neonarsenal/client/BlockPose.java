@@ -28,9 +28,14 @@ import org.joml.Vector3f;
 /**
  * Client-side blocking pose driven only by the supplied one-frame parry animations.
  *
- * <p>The upper body (torso, head, hands) is smoothly blended to the animation file; legs and their
- * outer skin layers are left completely vanilla. The torso is re-attached to the waist after posing
- * so no gap can appear between the body and the legs.</p>
+ * <p>The upper body (torso, head, hands) is smoothly blended to the animation file; the legs stay
+ * vanilla unless the authored stationary leg pose is blended in. The torso is re-attached to the
+ * waist after posing so no gap can appear between the body and the legs.</p>
+ *
+ * <p>Every outer skin layer (sleeves, jacket, pants and the head layer) is re-synced from the posed
+ * inner part, because the outer layers are separate {@link ModelPart}s: vanilla copies them from the
+ * inner parts in {@code setupAnim}, and the 3D Skin Layers mod either renders meshes from the inner
+ * parts or injects them into the outer parts, so both paths need the outer parts to be in sync.</p>
  */
 public final class BlockPose {
 
@@ -183,6 +188,13 @@ public final class BlockPose {
             shiftY(model.leftPants, footOffset);
             shiftY(model.rightPants, footOffset);
         }
+
+        // The head's outer skin layer ("hat") is a sibling part: vanilla re-syncs it from the head at
+        // the start of setupAnim, so it has to be re-synced after the pose moved the head and applied
+        // the ground offset. Without this the head layer stays at the vanilla head pose and visibly
+        // floats behind/above the posed head (vanilla layer and the 3D Skin Layers meshes alike,
+        // which are either rendered from the head part or injected into the hat part).
+        model.hat.copyFrom(model.head);
 
         RENDER_BENDS.put(model, new float[]{bendAngle(bones.get("right_arm_bend"), progress),
                 bendAngle(bones.get("left_arm_bend"), progress), progress});

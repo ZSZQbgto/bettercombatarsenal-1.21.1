@@ -28,6 +28,17 @@ sourceSets.main.resources {
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
+
+    // DevLogin (the launcher used by the optional authenticated "clientAuth" run below) is
+    // published on covers1624's Nexus, not on Maven Central. The content filter keeps this
+    // repository from being queried for any other dependency.
+    maven {
+        name = 'covers1624'
+        url = 'https://nexus.covers1624.net/repository/maven-hosted/'
+        content {
+            includeGroup 'net.covers1624'
+        }
+    }
 }
 
 base {
@@ -68,6 +79,20 @@ tasks.matching { it.name == 'runServer' }.configureEach {
             client()
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // 正版登录客户端：普通 "Client" 仍是离线开发账号，这个 run 改用 DevLogin 包裹启动，
+        // 首次启动会在控制台/对话框里要求打开 https://www.microsoft.com/link 输入代码登录微软账号，
+        // 之后令牌缓存在 ~/.devlogin，过期会自动刷新。
+        // 在 IDEA 里重新加载 Gradle 项目后，会出现名为 "Client (正版登录)" 的运行配置。
+        clientAuth {
+            client()
+            devLogin = true
+            ideName = 'Client (正版登录)'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // 微软登录接口访问不畅时，可放开下面两行，让 DevLogin 走本机代理（端口与 gradle.properties 一致）。
+            // jvmArgument '-Dhttps.proxyHost=127.0.0.1'
+            // jvmArgument '-Dhttps.proxyPort=7890'
         }
 
         server {

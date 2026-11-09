@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.world.entity.LivingEntity;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -21,10 +22,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * {@code body} part, so the custom blocking pose (which rotates and moves the torso) made the wings
  * float away from the shoulders. While the block pose is active, this mixin applies the current body
  * part transform to the elytra pose stack, so the wings follow the torso exactly like the arms and
- * head do.</p>
+ * head do. The transform is popped again when the layer returns, so layers rendered after the
+ * elytra (parrot on shoulder, ...) keep their normal position.</p>
  */
 @Mixin(ElytraLayer.class)
 public abstract class ElytraLayerBlockPoseMixin {
+
+    /** {@return whether this layer currently has the body transform on the shared pose stack}. */
+    @Unique
+    private boolean neonarsenal$elytraPoseApplied;
 
     @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V",
             at = @At("HEAD"))
@@ -32,6 +38,7 @@ public abstract class ElytraLayerBlockPoseMixin {
                                                 LivingEntity entity, float limbSwing, float limbSwingAmount,
                                                 float partialTicks, float ageInTicks, float netHeadYaw,
                                                 float headPitch, CallbackInfo ci) {
+        neonarsenal$elytraPoseApplied = false;
         if (!(entity instanceof AbstractClientPlayer player)) {
             return;
         }
@@ -46,6 +53,20 @@ public abstract class ElytraLayerBlockPoseMixin {
         }
         // The elytra wing root sits at the vanilla body pivot, so the body transform places the
         // wings on the shoulders and keeps them there while the torso is posed.
+        poseStack.pushPose();
         model.body.translateAndRotate(poseStack);
+        neonarsenal$elytraPoseApplied = true;
+    }
+
+    @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V",
+            at = @At("RETURN"))
+    private void neonarsenal$restoreElytraPose(PoseStack poseStack, MultiBufferSource buffer, int packedLight,
+                                               LivingEntity entity, float limbSwing, float limbSwingAmount,
+                                               float partialTicks, float ageInTicks, float netHeadYaw,
+                                               float headPitch, CallbackInfo ci) {
+        if (neonarsenal$elytraPoseApplied) {
+            neonarsenal$elytraPoseApplied = false;
+            poseStack.popPose();
+        }
     }
 }
