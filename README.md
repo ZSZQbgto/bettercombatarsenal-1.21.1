@@ -32,7 +32,7 @@
 
 ### 2. 四种锻刃材料
 
-铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 3 层，同层不能重复，**每 2 层稀有度 +1 阶**（1 层不提升，2 层起名称变黄）。
+铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 3 层，**同种材料最多锻 2 次**（第 2 次开启该材料的命中效果），**每 2 层稀有度 +1 阶**（1 层不提升，2 层起名称变黄）。
 
 | 材料 | 随身效果 | 命中效果 | 冷却 |
 |---|---|---|---|
@@ -41,7 +41,7 @@
 | 兔子脚 | 攻速 +5%、跳跃高度 +150%、跃斩增伤 +100% | 4 只无敌雷霆大兔子（免疫伤害与击退），每 0.5 秒咬 3 个目标各 4 伤害，10 秒后消失 | 30 秒 |
 | 回响碎片 | 攻速 -50%、伤害 +100% | 8 格内敌人互相攻击 8 秒 | 30 秒 |
 
-**解锁规则**：只锻入 1 层材料时仅生效该层的「随身效果」；锻入第 2 层后，全部已锻层的「命中效果」才开启（最多 3 层）。Shift 详情在只有 1 层时会显示「命中效果：锻入第二层后开启」。
+**解锁规则**：每种材料锻入 1 次只生效其「随身效果」；**同种材料再锻入第 2 次**才开启该材料的「命中效果」（每种材料最多 2 层，武器总共最多 3 层，可混搭不同材料）。Shift 详情在只锻入 1 次时显示「命中效果：同种材料再锻入一次后开启」。
 
 ### 3. 两个开关
 
@@ -145,7 +145,7 @@
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
 - **Tooltip**：平时显示刀刃锐度、颜色、附魔数值加成与锻刃百分比加成；按住 Shift 看附魔明细、综合性能与每层说明。
 - **配置**：模组列表滑条——粒子密度 0–3、刀刃发光强度 0–1。
-- **JEI**：176 条锻刃配方，铁砧为催化剂。
+- **JEI**：208 条锻刃配方（含同种材料第 2 次锻造），铁砧为催化剂。
 - **多人**：锻刃、冷却与粒子效果在多人联机下保持一致。
 
 ## 许可
@@ -189,7 +189,7 @@
 
 ### 2. Four forge materials
 
-Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, **+1 rarity per 2 layers** (a single layer does not raise the tier; from 2 layers the name turns yellow).
+Anvil weapon + material: 8 levels, 1:1, up to 3 layers, **each material can be forged twice** (the second copy unlocks that material's on-hit effect), **+1 rarity per 2 layers** (a single layer does not raise the tier; from 2 layers the name turns yellow).
 
 | Material | While held | On hit | Cooldown |
 |---|---|---|---|
@@ -198,7 +198,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, **+1
 | Rabbit's Foot | +5% attack speed, +150% jump height, +100% jump-slam damage | Four invulnerable thunder rabbits (immune to damage and knockback) bite 3 targets for 4 damage every 0.5 s, vanish after 10 s | 30 s |
 | Echo Shard | -50% attack speed, +100% damage | Mobs within 8 blocks fight each other for 8 s | 30 s |
 
-**Unlock rule**: forging one layer only grants that layer's "while held" bonus; the "on hit" effects of all forged layers unlock once a **second** layer is forged (up to 3 layers). While only one layer is forged, the Shift details show "On-hit effect: unlocks after forging a second layer".
+**Unlock rule**: forging one copy of a material only grants that material's "while held" bonus; **a second copy of the same material** unlocks its "on hit" effect (each material can be forged twice, up to 3 layers per weapon, different materials can be mixed). While only one copy is forged, the Shift details show "On-hit effect: forge a second copy of this material to unlock".
 
 ### 3. Two switches
 
@@ -302,7 +302,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, **+1
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.
 - **Tooltip**: shows blade sharpness, colour, numeric enchantment/forge bonuses by default; hold Shift for enchantment details, totals and per-layer text.
 - **Config**: mod-list sliders — particle density 0–3, blade glow intensity 0–1.
-- **JEI**: 176 forging recipes with the anvil as catalyst.
+- **JEI**: 208 forging recipes (including the second copy of each material) with the anvil as catalyst.
 - **Multiplayer**: forging, cooldowns and particle effects stay consistent in multiplayer.
 
 ## License

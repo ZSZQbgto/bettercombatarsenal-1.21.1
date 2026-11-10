@@ -44,8 +44,9 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * Forge-layer combat effects. All cooldowns are stored on the weapon stack with absolute game-time
  * end ticks ({@link WeaponCooldowns}), so dropping/switching the weapon never resets them.
  *
- * <p>Unlock rule: forging one layer only grants that layer's carried ("while held") bonus; the
- * on-hit effects below unlock once a second layer is forged (see {@link Forge#hitEffectsActive}).</p>
+ * <p>Unlock rule: forging one copy of a material only grants that material's carried ("while held")
+ * bonus; the material's on-hit effect unlocks once the same material has been forged a second time
+ * (see {@link Forge#hitEffectActive}). Held bonuses are applied once per material.</p>
  *
  * <ul>
  *   <li><b>Fire charge</b>: hits ignite the target for 8 s (no enchantment glint).</li>
@@ -146,36 +147,32 @@ public final class ForgeEffects {
             return;
         }
         if (Forge.hasRabbit(weapon) && JumpAttackHandler.isRecentJumpSlam(player)) {
-            // Rabbit layer: jump-slam damage +100% (a carried bonus, active from the first layer).
+            // Rabbit layer: jump-slam damage +100% (a carried bonus, active from the first copy).
             event.setAmount(event.getAmount() * 2.0F);
         }
-        if (!Forge.hitEffectsActive(weapon)) {
-            // A single forged layer only grants its carried bonus; the on-hit effects need a second
-            // layer.
-            return;
-        }
-        if (Forge.hasCreeper(weapon)) {
+        // A material's on-hit effect unlocks once that same material has been forged a second time.
+        if (Forge.hitEffectActive(weapon, Forge.CREEPER)) {
             try {
                 triggerCreeper(player, weapon, event.getEntity());
             } catch (Throwable throwable) {
                 NeonArsenal.LOGGER.warn("Creeper forge effect failed", throwable);
             }
         }
-        if (Forge.hasChorus(weapon)) {
+        if (Forge.hitEffectActive(weapon, Forge.CHORUS)) {
             try {
                 triggerChorus(player, weapon);
             } catch (Throwable throwable) {
                 NeonArsenal.LOGGER.warn("Chorus forge effect failed", throwable);
             }
         }
-        if (Forge.hasRabbit(weapon)) {
+        if (Forge.hitEffectActive(weapon, Forge.RABBIT)) {
             try {
                 triggerRabbit(player, weapon);
             } catch (Throwable throwable) {
                 NeonArsenal.LOGGER.warn("Rabbit forge effect failed", throwable);
             }
         }
-        if (Forge.hasEcho(weapon)) {
+        if (Forge.hitEffectActive(weapon, Forge.ECHO)) {
             try {
                 triggerEcho(player, weapon, event.getEntity());
             } catch (Throwable throwable) {
@@ -347,7 +344,7 @@ public final class ForgeEffects {
         double damage = 0.0D;
         double moveSpeed = 0.0D;
         if (weapon.getItem() instanceof SharpnessWeaponItem) {
-            for (String layer : Forge.layers(weapon)) {
+            for (String layer : Forge.distinctLayers(weapon)) {
                 switch (layer) {
                     case Forge.CHORUS -> {
                         damage += 0.10D;

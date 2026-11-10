@@ -98,9 +98,13 @@ public final class NeonArsenalJeiPlugin implements IModPlugin {
     }
 
     private static void addLayer(List<ForgingRecipe> recipes, ItemStack base, Item material, String layer, int xp) {
-        ItemStack result = base.copy();
-        Forge.add(result, layer);
-        recipes.add(new ForgingRecipe(base, new ItemStack(material), result, xp));
+        ItemStack once = base.copy();
+        Forge.add(once, layer);
+        recipes.add(new ForgingRecipe(base, new ItemStack(material), once, xp));
+        // The same material can be forged a second time: that copy unlocks the material's hit effect.
+        ItemStack twice = once.copy();
+        Forge.add(twice, layer);
+        recipes.add(new ForgingRecipe(once, new ItemStack(material), twice, xp));
     }
 
 }

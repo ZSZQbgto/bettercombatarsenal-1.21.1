@@ -171,7 +171,7 @@ public class SharpnessWeaponItem extends Item {
         if (!shift) {
             // Default view: the combined percentages always include the enchantment damage/attack
             // speed values; the enchantments themselves are listed by name only.
-            double[] forge = heldBonuses(layers);
+            double[] forge = heldBonuses(Forge.distinctLayers(stack));
             addBonusLine(tooltip, "bonus.damage", forge[0] + enchantDamage);
             addBonusLine(tooltip, "bonus.attack_speed", forge[1] + enchantAttackSpeed);
             if (!layers.isEmpty()) {
@@ -183,7 +183,7 @@ public class SharpnessWeaponItem extends Item {
                 enchantNames.forEach(tooltip::add);
             }
             if (!layers.isEmpty()) {
-                tooltip.add(Component.translatable(PREFIX + "forge_compact", forgeNames(layers))
+                tooltip.add(Component.translatable(PREFIX + "forge_compact", forgeNames(stack))
                         .withStyle(ChatFormatting.GRAY));
             } else {
                 tooltip.add(Component.translatable(PREFIX + "not_forged")
@@ -206,7 +206,7 @@ public class SharpnessWeaponItem extends Item {
         }
 
         tooltip.add(Component.translatable(PREFIX + "section_stats").withStyle(ChatFormatting.GOLD));
-        double[] bonus = heldBonuses(layers);
+        double[] bonus = heldBonuses(Forge.distinctLayers(stack));
         addBonusLine(tooltip, "bonus.damage", bonus[0] + enchantDamage);
         addBonusLine(tooltip, "bonus.attack_speed", bonus[1] + enchantAttackSpeed);
         addBonusLine(tooltip, "bonus.move_speed", bonus[2]);
@@ -219,32 +219,48 @@ public class SharpnessWeaponItem extends Item {
                 .withStyle(ChatFormatting.GRAY));
 
         tooltip.add(Component.translatable(PREFIX + "section_forge").withStyle(ChatFormatting.GOLD));
-        boolean hitEffects = Forge.hitEffectsActive(stack);
-        for (String layer : layers) {
-            tooltip.add(Component.translatable(layerNameKey(layer))
-                    .withStyle(style -> style.withColor(Forge.colorOf(layer))));
-            tooltip.add(Component.translatable(heldKey(layer)).withStyle(ChatFormatting.GRAY));
-            if (hitEffects) {
-                tooltip.add(Component.translatable(effectKey(layer)).withStyle(ChatFormatting.GRAY));
+        for (String layer : Forge.distinctLayers(stack)) {
+            int level = Forge.level(stack, layer);
+            Component name = Component.translatable(layerNameKey(layer))
+                    .withStyle(style -> style.withColor(Forge.colorOf(layer)));
+            if (level > 1) {
+                name = name.copy().append(Component.literal(" " + roman(level))
+                        .withStyle(style -> style.withColor(Forge.colorOf(layer))));
             }
-        }
-        if (!hitEffects) {
-            // Only one layer forged: the held bonus is active, the hit effects are still locked.
-            tooltip.add(Component.translatable(PREFIX + "forge.effect_locked")
-                    .withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(name);
+            tooltip.add(Component.translatable(heldKey(layer)).withStyle(ChatFormatting.GRAY));
+            if (level >= 2) {
+                // Second copy of the same material: its on-hit effect is unlocked.
+                tooltip.add(Component.translatable(effectKey(layer)).withStyle(ChatFormatting.GRAY));
+            } else {
+                tooltip.add(Component.translatable(PREFIX + "forge.effect_locked")
+                        .withStyle(ChatFormatting.DARK_GRAY));
+            }
         }
     }
 
+    /** {@return a small roman number for the forged level (only II is used today)}. */
+    private static String roman(int value) {
+        return value >= 2 ? "II" : "I";
+    }
+
     /** {@return the "layer + layer + ..." component used by the compact tooltip line}. */
-    private static Component forgeNames(List<String> layers) {
+    private static Component forgeNames(ItemStack stack) {
+        List<String> layers = Forge.distinctLayers(stack);
         Component names = Component.empty();
         for (int i = 0; i < layers.size(); i++) {
             if (i > 0) {
                 names = names.copy().append(Component.literal(" + ").withStyle(ChatFormatting.DARK_GRAY));
             }
             String layer = layers.get(i);
-            names = names.copy().append(Component.translatable(layerNameKey(layer))
-                    .withStyle(style -> style.withColor(Forge.colorOf(layer))));
+            int level = Forge.level(stack, layer);
+            Component part = Component.translatable(layerNameKey(layer))
+                    .withStyle(style -> style.withColor(Forge.colorOf(layer)));
+            if (level > 1) {
+                part = part.copy().append(Component.literal(" " + roman(level))
+                        .withStyle(style -> style.withColor(Forge.colorOf(layer))));
+            }
+            names = names.copy().append(part);
         }
         return names;
     }

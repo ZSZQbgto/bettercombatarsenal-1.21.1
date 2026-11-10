@@ -45,5 +45,5 @@
   "tooltip.bettercombat_neonarsenal.forge_colour": "Forge colour: #%s",
   "subtitles.bettercombat_neonarsenal.parry": "Parry",
   "subtitles.bettercombat_neonarsenal.landed": "Landing",
-  "tooltip.bettercombat_neonarsenal.forge.effect_locked": "On-hit effect: unlocks after forging a second layer"
+  "tooltip.bettercombat_neonarsenal.forge.effect_locked": "On-hit effect: forge a second copy of this material to unlock"
 }

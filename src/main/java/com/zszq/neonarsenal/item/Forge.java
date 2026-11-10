@@ -10,6 +10,8 @@ import net.minecraft.world.item.ItemStack;
 public final class Forge {
 
     public static final int MAX_LAYERS = 3;
+    /** Each material can be forged at most twice: the second copy unlocks its on-hit effect. */
+    public static final int MAX_LEVEL = 2;
     public static final String CHORUS = "chorus";
     public static final String CREEPER = "creeper";
     public static final String RABBIT = "rabbit";
@@ -41,17 +43,32 @@ public final class Forge {
         return layers(stack).contains(layer);
     }
 
+    /** {@return how many times this material has been forged onto the weapon (0, 1 or 2)}. */
+    public static int level(ItemStack stack, String layer) {
+        int count = 0;
+        for (String current : layers(stack)) {
+            if (current.equals(layer)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** {@return the forged layers without duplicates, in first-forged order}. */
+    public static List<String> distinctLayers(ItemStack stack) {
+        return List.copyOf(new java.util.LinkedHashSet<>(layers(stack)));
+    }
+
     /**
-     * A single forged layer only grants its carried ("while held") bonus; the on-hit effects of all
-     * forged layers unlock once the weapon has a second layer.
+     * Forging one copy of a material only grants its carried ("while held") bonus; the material's
+     * on-hit effect unlocks once the same material has been forged a second time.
      */
-    public static boolean hitEffectsActive(ItemStack stack) {
-        return layers(stack).size() >= 2;
+    public static boolean hitEffectActive(ItemStack stack, String layer) {
+        return level(stack, layer) >= 2;
     }
 
     public static boolean canAdd(ItemStack stack, String layer) {
-        List<String> current = layers(stack);
-        return current.size() < MAX_LAYERS && !current.contains(layer);
+        return layers(stack).size() < MAX_LAYERS && level(stack, layer) < MAX_LEVEL;
     }
 
     public static void add(ItemStack stack, String layer) {
@@ -94,7 +111,7 @@ public final class Forge {
      * combined colour on the hue ring instead of washing out to white/grey.</p>
      */
     public static int color(ItemStack stack) {
-        List<String> layers = layers(stack);
+        List<String> layers = distinctLayers(stack);
         if (layers.isEmpty()) {
             return 0xFFFFFF;
         }
