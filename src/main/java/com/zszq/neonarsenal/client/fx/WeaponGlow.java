@@ -145,8 +145,10 @@ public final class WeaponGlow {
     private static final float FLOW_SPEED = 0.45F;
     /** Number of colour bands along the blade. */
     private static final float FLOW_CYCLES = 1.4F;
-    /** Maximum hue distance from the weapon's colour-ring colour, in degrees. */
-    private static final float FLOW_HUE = 26.0F;
+    /** Maximum hue distance from the weapon's colour-ring colour, in degrees (narrow variation). */
+    private static final float FLOW_HUE = 12.0F;
+    /** Weight of the second hue harmonic; keeps the bands organic inside the narrow hue range. */
+    private static final float FLOW_HUE_SECOND = 0.25F;
     /** Brightness wave amplitude so even an uncoloured (white) blade visibly flows. */
     private static final float FLOW_BRIGHTNESS = 0.22F;
 
@@ -388,13 +390,14 @@ public final class WeaponGlow {
 
     /**
      * {@return the flowing colour at one blade position}. The hue moves around the weapon's colour on
-     * the hue ring (two harmonics keeps the bands organic), and the brightness follows the same wave
-     * so an uncoloured blade still shows the flow.
+     * the hue ring inside a narrow range (the second harmonic keeps the bands organic), and the
+     * brightness follows the same wave so an uncoloured blade still shows the flow.
      */
     private static float[] flowColor(float[] hsv, float bladeCoord, double seconds) {
         double phase = (bladeCoord * FLOW_CYCLES + seconds * FLOW_SPEED) * Math.PI * 2.0D;
         float wave = (float) Math.sin(phase);
-        float hue = hsv[0] + FLOW_HUE * (wave + 0.35F * (float) Math.sin(phase * 2.0D - 1.1D));
+        float hue = hsv[0] + FLOW_HUE
+                * (wave + FLOW_HUE_SECOND * (float) Math.sin(phase * 2.0D - 1.1D));
         float value = hsv[2] * (1.0F + FLOW_BRIGHTNESS * wave);
         return hsvToRgb(hue, hsv[1], Math.max(0.0F, Math.min(1.0F, value)));
     }

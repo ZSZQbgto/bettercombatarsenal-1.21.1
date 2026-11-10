@@ -60,10 +60,10 @@ public final class NeonArsenalClient {
     }
 
     /**
-     * The arsenal weapons draw their own enchantment section (numeric bonuses by default, names and
-     * effects while Shift is held), so the plain vanilla enchantment-name lines are removed from
-     * their tooltip to avoid showing the same information twice and to keep the default tooltip to
-     * the numeric bonuses only.
+     * The arsenal weapons draw their own enchantment section (names only; the numeric values are
+     * folded into the combined damage/attack speed percentages), so the plain vanilla
+     * enchantment-name lines are removed from their tooltip to avoid showing the same information
+     * twice.
      */
     private static void onItemTooltip(net.neoforged.neoforge.event.entity.player.ItemTooltipEvent event) {
         net.minecraft.world.item.ItemStack stack = event.getItemStack();

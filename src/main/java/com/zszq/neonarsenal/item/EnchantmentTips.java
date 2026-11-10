@@ -17,17 +17,20 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.enchantment.effects.EnchantmentAttributeEffect;
 
 /**
  * Tooltip computation for the vanilla enchantments of the arsenal weapons.
  *
- * <p>Damage-type enchantments are shown as percentages of the weapon's displayed attack damage, the
- * same {@code +N%} style as the forge bonus lines: sharpness damage, the conditional smite/bane of
- * arthropods damage and the fire aspect burn damage. Unbreaking and sweeping edge are already
- * percentages. Enchantments without a meaningful denominator keep their value text (knockback
- * strength, looting level, mending).</p>
+ * <p>The tooltip only lists the enchantment <b>names</b>; their numeric effect is folded into the
+ * combined percentage lines of the total stats: damage-type enchantments (sharpness, smite, bane of
+ * arthropods, fire aspect) are summed into the damage percentage and enchantment attribute modifiers
+ * (for example a data-driven attack speed enchantment) are added to the attack speed percentage.
+ * Both percentages are relative to the weapon's displayed base attack damage / vanilla base attack
+ * speed, the same denominator as the forge bonus lines.</p>
  */
 final class EnchantmentTips {
 
@@ -37,6 +40,9 @@ final class EnchantmentTips {
     private static final List<String> ORDER = List.of(
             "sharpness", "smite", "bane_of_arthropods", "sweeping_edge", "fire_aspect",
             "knockback", "looting", "unbreaking", "mending");
+
+    /** Vanilla player base attack speed; used to turn absolute attack speed modifiers into a %. */
+    private static final double BASE_ATTACK_SPEED = 4.0D;
 
     private EnchantmentTips() {
     }
@@ -52,92 +58,65 @@ final class EnchantmentTips {
         return entries;
     }
 
-    /** {@return the damage bonus of sharpness in percent of the base attack damage (0 when absent)}. */
-    static double sharpnessPercent(ItemStack stack) {
-        for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments(stack)) {
-            if (is(entry.getKey(), "sharpness")) {
-                return percent(entry.getValue() <= 1 ? 1.0D : 1.0D + 0.5D * (entry.getValue() - 1), stack);
-            }
-        }
-        return 0.0D;
-    }
-
-    /** {@return the compact numeric bonus lines (always shown in the tooltip)}. */
-    static List<Component> bonuses(ItemStack stack) {
+    /** {@return the enchantment names only, in display order (their numbers are folded into the
+     *  combined stats lines)}. */
+    static List<Component> names(ItemStack stack) {
         List<Component> lines = new ArrayList<>();
         for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments(stack)) {
-            // Sharpness is merged into the total damage percentage line.
-            if (is(entry.getKey(), "sharpness")) {
-                continue;
-            }
-            Component bonus = bonusOf(entry.getKey(), entry.getValue(), stack);
-            if (bonus != null) {
-                lines.add(bonus);
-            }
+            lines.add(Enchantment.getFullname(entry.getKey(), entry.getValue())
+                    .copy().withStyle(ChatFormatting.GRAY));
         }
         return lines;
     }
 
-    /** {@return the detailed lines ("name: bonus") shown while Shift is held}. */
-    static List<Component> details(ItemStack stack) {
-        List<Component> lines = new ArrayList<>();
+    /**
+     * {@return the combined damage bonus of all enchantments as a fraction of the weapon's base
+     * attack damage (0 when the weapon has no damage enchantment)}.
+     *
+     * <p>Sharpness, smite, bane of arthropods and fire aspect are all converted with the same
+     * vanilla damage values the per-enchantment lines used before: sharpness {@code 1 + 0.5*(level-1)}
+     * damage, smite/bane {@code 2.5*level}, fire aspect {@code 4*level} burn damage.</p>
+     */
+    static double damageFraction(ItemStack stack) {
+        double damage = 0.0D;
         for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments(stack)) {
-            Component name = Enchantment.getFullname(entry.getKey(), entry.getValue());
-            Component bonus = bonusOf(entry.getKey(), entry.getValue(), stack);
-            if (bonus == null) {
-                lines.add(name);
-            } else {
-                lines.add(Component.empty()
-                        .append(name)
-                        .append(Component.literal(": ").withStyle(ChatFormatting.DARK_GRAY))
-                        .append(bonus));
+            Holder<Enchantment> enchantment = entry.getKey();
+            int level = entry.getValue();
+            if (is(enchantment, "sharpness")) {
+                damage += level <= 1 ? 1.0D : 1.0D + 0.5D * (level - 1);
+            } else if (is(enchantment, "smite") || is(enchantment, "bane_of_arthropods")) {
+                damage += 2.5D * level;
+            } else if (is(enchantment, "fire_aspect")) {
+                damage += 4.0D * level;
             }
         }
-        return lines;
+        return damage / baseAttackDamage(stack);
     }
 
-    /** {@return the numeric effect text for one enchantment, or {@code null} when it has none}. */
-    private static Component bonusOf(Holder<Enchantment> enchantment, int level, ItemStack stack) {
-        if (level <= 0) {
-            return null;
+    /**
+     * {@return the attack speed bonus added by enchantment attribute modifiers as a fraction of the
+     * vanilla base attack speed (0 when no enchantment modifies attack speed)}.
+     *
+     * <p>Vanilla 1.21 enchantments are data driven, so a pack can add attack speed through
+     * {@code EnchantmentEffectComponents.ATTRIBUTES}; absolute values are divided by the vanilla base
+     * attack speed, relative values are used as the fraction directly.</p>
+     */
+    static double attackSpeedFraction(ItemStack stack) {
+        double bonus = 0.0D;
+        for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments(stack)) {
+            for (EnchantmentAttributeEffect effect : entry.getKey().value()
+                    .getEffects(EnchantmentEffectComponents.ATTRIBUTES)) {
+                if (!effect.attribute().is(Attributes.ATTACK_SPEED)) {
+                    continue;
+                }
+                double amount = effect.amount().calculate(entry.getValue());
+                bonus += switch (effect.operation()) {
+                    case ADD_VALUE -> amount / BASE_ATTACK_SPEED;
+                    case ADD_MULTIPLIED_BASE, ADD_MULTIPLIED_TOTAL -> amount;
+                };
+            }
         }
-        ResourceLocation id = WeaponEnchantments.idOf(enchantment);
-        if (id == null || !"minecraft".equals(id.getNamespace())) {
-            return null;
-        }
-        return switch (id.getPath()) {
-            // Vanilla 1.21 sharpness: +1 damage for the first level, +0.5 for every level above.
-            case "sharpness" -> percentLine("enchant.attack_damage",
-                    percent(1.0D + 0.5D * (level - 1), stack), ChatFormatting.GREEN);
-            case "smite" -> percentLine("enchant.vs_undead",
-                    percent(2.5D * level, stack), ChatFormatting.GREEN);
-            case "bane_of_arthropods" -> percentLine("enchant.vs_arthropods",
-                    percent(2.5D * level, stack), ChatFormatting.GREEN);
-            // Fire aspect keeps the target burning for 4 s per level (about 1 damage per second).
-            case "fire_aspect" -> percentLine("enchant.fire_damage",
-                    percent(4.0D * level, stack), ChatFormatting.GOLD);
-            case "knockback" -> Component.translatable(PREFIX + "enchant.knockback",
-                    number(level)).withStyle(ChatFormatting.GREEN);
-            case "looting" -> Component.translatable(PREFIX + "enchant.looting",
-                    number(level)).withStyle(ChatFormatting.GREEN);
-            case "sweeping_edge" -> Component.translatable(PREFIX + "enchant.sweeping",
-                    number(Math.round(100.0D * level / (level + 1.0D)))).withStyle(ChatFormatting.GREEN);
-            case "unbreaking" -> Component.translatable(PREFIX + "enchant.unbreaking",
-                    number(Math.round(100.0D * level / (level + 1.0D)))).withStyle(ChatFormatting.GREEN);
-            case "mending" -> Component.translatable(PREFIX + "enchant.mending")
-                    .withStyle(ChatFormatting.GREEN);
-            default -> null;
-        };
-    }
-
-    /** {@return {@code damage} as a rounded integer percentage of the weapon's base attack damage}. */
-    private static long percent(double damage, ItemStack stack) {
-        double base = baseAttackDamage(stack);
-        return Math.round(100.0D * damage / base);
-    }
-
-    private static Component percentLine(String key, long percent, ChatFormatting colour) {
-        return Component.translatable(PREFIX + key, "+" + percent + "%").withStyle(colour);
+        return bonus;
     }
 
     /** {@return the displayed attack damage of the weapon: player base 1 + the item's modifiers}. */
@@ -167,10 +146,5 @@ final class EnchantmentTips {
         }
         int index = ORDER.indexOf(id.getPath());
         return index < 0 ? ORDER.size() : index;
-    }
-
-    /** Formats a number without a trailing {@code .0}. */
-    private static String number(long value) {
-        return Long.toString(value);
     }
 }

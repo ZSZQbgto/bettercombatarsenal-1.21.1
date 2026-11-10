@@ -119,10 +119,11 @@
   - **长剑、双刃剑、横刀、刺剑、匕首**：锋利 V、亡灵杀手 V、节肢杀手 V、击退 II、抢夺 III、火焰附加 II、耐久 III、经验修补 I、横扫之刃 III。
   - **阔剑、双刃斧、长枪**：锋利 V、亡灵杀手 V、节肢杀手 V、击退 II、抢夺 III、火焰附加 II、耐久 III、经验修补 I（**无横扫之刃**）。
   - 长枪不适用三叉戟附魔（忠诚、激流、引雷、穿刺）；**致密/破甲**为原版重锤专属，不能自然获得。`/enchant` 命令可强制附上，且仍按原版排斥（致密/破甲 与 锋利/亡灵杀手/节肢杀手/穿刺 互斥）。
-- **附魔视觉效果**：未锻入**发光墨囊**时无效果；锻入后刀刃发光不再是单一颜色，而是**中等速度的流光**——颜色沿刀刃在武器当前颜色环（染料/锻刃混色）附近动态流动；未染色时表现为明暗流光。
+- **附魔视觉效果**：未锻入**发光墨囊**时无效果；锻入后刀刃发光不再是单一颜色，而是**中等速度的流光**——颜色沿刀刃在武器当前颜色环（染料/锻刃混色）附近以**较窄的色相变化范围**（±12°、第二谐波权重 0.25）流动；未染色时表现为明暗流光。
 - **不显示原版附魔光效**：附魔武器不会出现原版附魔闪烁，只保留本模组自己的刀刃发光/流光。
-- **Tooltip**：默认只显示**数值加成**，且统一为百分比：锋利/亡灵杀手/节肢杀手/火焰附加折算为**相对武器基础攻击伤害的百分比**（锋利与锻刃伤害百分比合并为一行），耐久/横扫本身即百分比；击退/抢夺/经验修补保留原版文字数值。按住 **Shift** 查看附魔名称与效果明细、综合性能与锻刃说明。
+- **Tooltip**：默认显示**综合百分比**：伤害与攻速会把附魔提供的伤害/攻速数值**叠加**到锻刃百分比上（锋利/亡灵杀手/节肢杀手/火焰附加折算为相对武器基础攻击伤害的百分比；附魔数据里的攻速修饰符也计入攻速百分比），附魔部分**只列附魔名称**；按住 **Shift** 查看附魔名称、综合性能与锻刃说明。
 - **经验修补（Mending）**：附在本模组武器上时不再修耐久（武器无耐久），改为**每 1 点经验恢复 20 点锋利度**（消耗对应经验，优先主手、其次副手；锋利度已满时经验正常获得，多余经验仍会正常进账/修其它带经验修补的装备）。
+- **耐久（Unbreaking）**：武器无耐久，附魔改为降低**锋利度损耗率**：沿用原版耐久公式，每级 L 使每次命中/挖掘消耗 1 点锋利度的概率变为 1/(L+1)（I 50%、II 33.3%、III 25%），即期望损耗率降为 1/(L+1)。
 
 ### 9. 冲锋前刺（骑乘长枪）
 
@@ -260,10 +261,11 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
   - **Longsword, Double-Edged Sword, Hengdao, Rapier, Dagger**: Sharpness V, Smite V, Bane of Arthropods V, Knockback II, Looting III, Fire Aspect II, Unbreaking III, Mending I, Sweeping Edge III.
   - **Broadsword, Double-Bladed Axe, Spear**: the same list **without Sweeping Edge**.
   - The spear accepts no trident enchantments (Loyalty, Riptide, Channeling, Impaling); **Density/Breach** are mace-only and cannot be obtained naturally. `/enchant` can force them and the vanilla exclusive sets are still enforced (Density/Breach vs Sharpness/Smite/Bane/Impaling).
-- **Visual effect**: no glow ink sac → no effect; with it the blade glow is no longer a single colour but a **medium-speed flowing light** whose colours travel along the blade near the weapon's current colour-ring colour (dye/forge mix); an uncoloured blade shows a brightness flow.
+- **Visual effect**: no glow ink sac → no effect; with it the blade glow is no longer a single colour but a **medium-speed flowing light** whose colours travel along the blade near the weapon's current colour-ring colour (dye/forge mix) inside a **narrower hue range** (±12°, second harmonic weight 0.25); an uncoloured blade shows a brightness flow.
 - **No vanilla enchantment glint**: enchanted arsenal weapons never show the vanilla foil effect; only the mod's own blade glow/flow is used.
-- **Tooltip**: by default only the **numeric bonuses**, uniformly as percentages: Sharpness/Smite/Bane of Arthropods/Fire Aspect are converted to **percentages of the weapon's base attack damage** (sharpness is merged into the forge damage percentage line), while Unbreaking/Sweeping Edge are percentages already; Knockback/Looting/Mending keep their vanilla value text. Hold **Shift** for enchantment names and effect details, total stats and forge descriptions.
+- **Tooltip**: the default view shows the **combined percentages**: damage and attack speed **add** the enchantment-provided damage/attack-speed values to the forge percentages (Sharpness/Smite/Bane of Arthropods/Fire Aspect as percentages of the weapon's base attack damage; attack-speed modifiers in the enchantment data are also added to the attack speed percentage), and the enchantments themselves are listed by **name only**. Hold **Shift** for the enchantment names, total stats and forge descriptions.
 - **Mending** on an arsenal weapon restores **sharpness** instead of durability (the weapons are unbreakable): **1 experience point restores 20 sharpness** (that experience is consumed; the main hand is repaired first, then the off hand). When the held weapon is already full, experience is gained normally, and leftover experience still repairs other Mending gear.
+- **Unbreaking** on an arsenal weapon reduces the **sharpness loss rate** instead of durability, with the vanilla durability formula: with level L each hit/broken block consumes one sharpness point with a probability of 1/(L+1) (I 50%, II 33.3%, III 25%), i.e. the expected loss rate becomes 1/(L+1).
 
 ## Weapons
 

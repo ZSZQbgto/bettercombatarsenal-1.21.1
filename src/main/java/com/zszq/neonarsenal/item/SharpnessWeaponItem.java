@@ -163,25 +163,24 @@ public class SharpnessWeaponItem extends Item {
                     .withStyle(style -> style.withColor(colour)));
         }
         List<String> layers = Forge.layers(stack);
-        List<Component> enchantBonuses = EnchantmentTips.bonuses(stack);
-        double sharpnessPercent = EnchantmentTips.sharpnessPercent(stack);
+        List<Component> enchantNames = EnchantmentTips.names(stack);
+        double enchantDamage = EnchantmentTips.damageFraction(stack);
+        double enchantAttackSpeed = EnchantmentTips.attackSpeedFraction(stack);
         boolean shift = shiftDown();
 
         if (!shift) {
-            // Default view: only the numeric bonuses, all damage-type enchantments folded into the
-            // same percentage lines the forge bonuses use.
+            // Default view: the combined percentages always include the enchantment damage/attack
+            // speed values; the enchantments themselves are listed by name only.
+            double[] forge = heldBonuses(layers);
+            addBonusLine(tooltip, "bonus.damage", forge[0] + enchantDamage);
+            addBonusLine(tooltip, "bonus.attack_speed", forge[1] + enchantAttackSpeed);
             if (!layers.isEmpty()) {
-                double[] bonus = heldBonuses(layers);
-                addBonusLine(tooltip, "bonus.damage", bonus[0] + sharpnessPercent / 100.0D);
-                addBonusLine(tooltip, "bonus.attack_speed", bonus[1]);
-                addBonusLine(tooltip, "bonus.move_speed", bonus[2]);
-            } else if (sharpnessPercent > 0.0D) {
-                addBonusLine(tooltip, "bonus.damage", sharpnessPercent / 100.0D);
+                addBonusLine(tooltip, "bonus.move_speed", forge[2]);
             }
-            if (!enchantBonuses.isEmpty()) {
-                tooltip.add(Component.translatable(PREFIX + "section_enchant_bonus")
+            if (!enchantNames.isEmpty()) {
+                tooltip.add(Component.translatable(PREFIX + "section_enchant")
                         .withStyle(ChatFormatting.GOLD));
-                enchantBonuses.forEach(tooltip::add);
+                enchantNames.forEach(tooltip::add);
             }
             if (!layers.isEmpty()) {
                 tooltip.add(Component.translatable(PREFIX + "forge_compact", forgeNames(layers))
@@ -195,10 +194,11 @@ public class SharpnessWeaponItem extends Item {
             return;
         }
 
-        // Shift view: the detailed enchantment list plus the complete forge/stats description.
-        if (!enchantBonuses.isEmpty() || sharpnessPercent > 0.0D) {
+        // Shift view: the enchantment names plus the complete forge/stats description. The stats
+        // percentages already contain the enchantment damage / attack speed contributions.
+        if (!enchantNames.isEmpty()) {
             tooltip.add(Component.translatable(PREFIX + "section_enchant").withStyle(ChatFormatting.GOLD));
-            EnchantmentTips.details(stack).forEach(tooltip::add);
+            enchantNames.forEach(tooltip::add);
         }
         if (layers.isEmpty()) {
             tooltip.add(Component.translatable(PREFIX + "not_forged").withStyle(ChatFormatting.DARK_GRAY));
@@ -207,8 +207,8 @@ public class SharpnessWeaponItem extends Item {
 
         tooltip.add(Component.translatable(PREFIX + "section_stats").withStyle(ChatFormatting.GOLD));
         double[] bonus = heldBonuses(layers);
-        addBonusLine(tooltip, "bonus.damage", bonus[0]);
-        addBonusLine(tooltip, "bonus.attack_speed", bonus[1]);
+        addBonusLine(tooltip, "bonus.damage", bonus[0] + enchantDamage);
+        addBonusLine(tooltip, "bonus.attack_speed", bonus[1] + enchantAttackSpeed);
         addBonusLine(tooltip, "bonus.move_speed", bonus[2]);
         if (Forge.hasRabbit(stack)) {
             tooltip.add(Component.translatable(PREFIX + "jump_height").withStyle(ChatFormatting.GRAY));
