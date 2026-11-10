@@ -32,7 +32,11 @@
     "bettercombat.FallSlamBetterCombatGateMixin",
     "ParticleAccessor",
     "ParticleEngineTrailFollowMixin",
-    "bettercombat.SlashTrailFollowMixin"
+    "bettercombat.SlashTrailFollowMixin",
+    "CapeLayerVanillaMixin",
+    "pal.AnimationApplierCapeMixin",
+    "CapeLayerVanillaEarlyMixin",
+    "CapeLayerVanillaLateMixin"
   ],
   "injectors": {
     "defaultRequire": 1

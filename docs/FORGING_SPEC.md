@@ -322,3 +322,12 @@ et.bettercombat. 开头**的粒子（即 BC 自己的刀光粒子）及其施放
 ## 11. 经验修补（Mending）→ 锋利度
 
 arsenal 武器无耐久（SharpnessWeaponItem 不可损坏），原版经验修补没有可修的耐久。MendingSharpness（注册在 NeoForge.EVENT_BUS 的 PlayerXpEvent.PickupXp）在玩家拾取经验球时把经验转换为武器锋利度：**每 1 点经验恢复 20 点锋利度**（SHARPNESS_PER_XP = 20）。只处理主手/副手中带 EnchantmentEffectComponents.REPAIR_WITH_XP 且 Sharpness.get < Sharpness.MAX 的 arsenal 武器，优先主手、其次副手；按缺少的锋利度算出所需经验 ceil(missing / 20)，直接扣减 ExperienceOrb.value（消耗经验），剩余经验仍由原版 ExperienceOrb.playerTouch 流程发放（可正常进账，或修其它带经验修补的装备）。武器锋利度已满时不扣经验，经验正常获得。锋利度上限仍为 Sharpness.MAX = 3000。
+
+## 12. 披风渲染（Better Combat / PAL）
+
+Better Combat 使用的 Player Animator Library（PAL）在动画激活时，会在 `CapeLayer#render` 里把披风挂到被动画和弯曲的躯干上（`dev.kosmx.playerAnim.mixin.CapeLayerMixin`：先按 `body` 的位置/旋转和 `torso`/`body` 弯曲量变换 pose stack，再把 cloak 部件姿势清零），因此披风会紧贴后背而不是按原版摆动。未安装 FancyPlayerAnimation 时，本模组让披风回到**原版渲染**：
+
+- `CapeLayerVanillaMixin`（priority 500，早于 PAL 的默认 1000）在 `CapeLayer#render` HEAD 置 `CapeRenderState.suppressPalCape = true`，RETURN 清掉；
+- `pal.AnimationApplierCapeMixin` 在该标记为真时让 PAL 的 `AnimationApplier#isActive()` 返回 false，PAL 的披风分支因此走非活动路径（只把 cloak 弯曲清零，不动 pose stack），披风由原版 `CapeLayer` 正常渲染（移动摆动/步态晃动/下蹲倾斜）；
+- 标记只在这一个渲染调用内为真，正常动画播放不受影响；
+- 安装 FancyPlayerAnimation 时 `CapeRenderState.suppressPalCape` 保持 false，FPA 自己的披风处理照常生效。

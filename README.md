@@ -95,6 +95,7 @@
 - **骑马 / 坐船 / 坐矿车等坐姿格挡时**，下半身保持原版坐姿（不套用动画文件的站姿腿），只有上半身进入格挡姿态，整体保持乘坐高度。
 - **骑乘活体坐骑**（马、驴、骆驼等）行走/奔跑时，角色会随坐骑步态轻微上下起伏（幅度约 1 像素，速度越快越明显），武器与披风等一起跟随；船/矿车不应用。
 - **穿戴鞘翅格挡时**，鞘翅会收拢为潜行时的姿态，并跟随躯干/肩膀一起运动，不会与身体分离。
+- **披风（Better Combat）**：Better Combat 使用的 Player Animator Library 会把披风挂到被动画/弯曲的躯干上，导致披风紧贴后背。未安装 FancyPlayerAnimation 时，本模组在 `CapeLayer` 渲染期间把该库的动画状态临时判为非活动（`CapeLayerVanillaMixin` + `AnimationApplierCapeMixin`），让披风按**原版渲染**（移动摆动、步态晃动、下蹲倾斜）；安装 FPA 时保持 FPA 自己的披风处理不变。
 - **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
 - **第一人称格挡**：格挡时武器切换到设计好的第一人称格挡姿态（_fpparry 模型的第一人称 display 变换），松开后平滑回到普通持握。
 
@@ -248,6 +249,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 - **Blocking while riding (horse, boat, minecart, ...)**: the lower body keeps the vanilla seated pose and the model keeps the seat height; only the upper body enters the block pose.
 - **While riding a living mount** (horse, donkey, camel, ...) the rider heaves subtly with the mount's gait (about one pixel, stronger at higher speed); the weapon and layers follow. Boats and minecarts are unaffected.
 - **Blocking with an elytra equipped** folds the wings into the sneaking elytra pose and keeps them attached to the posed torso/shoulders instead of floating apart.
+- **Cape (Better Combat)**: the Player Animator Library used by Better Combat attaches the cape to the animated/bent torso, which makes the cape stick to the back. Without FancyPlayerAnimation installed the mod makes that library report its animation as inactive while `CapeLayer` renders (`CapeLayerVanillaMixin` + `AnimationApplierCapeMixin`), so the cape renders exactly like **vanilla** (movement swing, walk bob, crouch tilt); with FPA installed FPA keeps its own cape handling.
 - **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking.
 - **First-person parry**: while blocking, the weapon switches to the authored first-person parry pose (the `_fpparry` model's first-person display transform) with a **0.18 s smoothstep** blend to and from the normal grip; a successful block bursts the same weapon-coloured sparks as third person (14 particles, glowing when glow ink was forged) at the first-person weapon position.
 
