@@ -32,7 +32,7 @@
 
 ### 2. 四种锻刃材料
 
-铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 3 层，同层不能重复，每层稀有度 +1。
+铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 3 层，同层不能重复，**每 2 层稀有度 +1 阶**（1 层不提升，2 层起名称变黄）。
 
 | 材料 | 随身效果 | 命中效果 | 冷却 |
 |---|---|---|---|
@@ -40,6 +40,8 @@
 | 苦力怕头颅 | 伤害 +5%、攻速 +15% | 无敌苦力怕（免疫伤害与击退）远离并强吸敌对生物，目标锁定至爆炸无法脱锁，随后爆炸（不破坏地形、仅伤敌对，dummmmmmy 人偶除外） | 30 秒 |
 | 兔子脚 | 攻速 +5%、跳跃高度 +150%、跃斩增伤 +100% | 4 只无敌雷霆大兔子（免疫伤害与击退），每 0.5 秒咬 3 个目标各 4 伤害，10 秒后消失 | 30 秒 |
 | 回响碎片 | 攻速 -50%、伤害 +100% | 8 格内敌人互相攻击 8 秒 | 30 秒 |
+
+**解锁规则**：只锻入 1 层材料时仅生效该层的「随身效果」；锻入第 2 层后，全部已锻层的「命中效果」才开启（最多 3 层）。Shift 详情在只有 1 层时会显示「命中效果：锻入第二层后开启」。
 
 ### 3. 两个开关
 
@@ -187,7 +189,7 @@
 
 ### 2. Four forge materials
 
-Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 rarity per layer.
+Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, **+1 rarity per 2 layers** (a single layer does not raise the tier; from 2 layers the name turns yellow).
 
 | Material | While held | On hit | Cooldown |
 |---|---|---|---|
@@ -195,6 +197,8 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, no duplicate layer, +1 r
 | Creeper Head | +5% damage, +15% attack speed | An invulnerable creeper walks off, pulls mobs, then explodes | 30 s |
 | Rabbit's Foot | +5% attack speed, +150% jump height, +100% jump-slam damage | Four invulnerable thunder rabbits (immune to damage and knockback) bite 3 targets for 4 damage every 0.5 s, vanish after 10 s | 30 s |
 | Echo Shard | -50% attack speed, +100% damage | Mobs within 8 blocks fight each other for 8 s | 30 s |
+
+**Unlock rule**: forging one layer only grants that layer's "while held" bonus; the "on hit" effects of all forged layers unlock once a **second** layer is forged (up to 3 layers). While only one layer is forged, the Shift details show "On-hit effect: unlocks after forging a second layer".
 
 ### 3. Two switches
 

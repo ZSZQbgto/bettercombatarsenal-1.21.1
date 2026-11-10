@@ -219,12 +219,19 @@ public class SharpnessWeaponItem extends Item {
                 .withStyle(ChatFormatting.GRAY));
 
         tooltip.add(Component.translatable(PREFIX + "section_forge").withStyle(ChatFormatting.GOLD));
+        boolean hitEffects = Forge.hitEffectsActive(stack);
         for (String layer : layers) {
             tooltip.add(Component.translatable(layerNameKey(layer))
                     .withStyle(style -> style.withColor(Forge.colorOf(layer))));
-            for (String key : descriptionKeys(layer)) {
-                tooltip.add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable(heldKey(layer)).withStyle(ChatFormatting.GRAY));
+            if (hitEffects) {
+                tooltip.add(Component.translatable(effectKey(layer)).withStyle(ChatFormatting.GRAY));
             }
+        }
+        if (!hitEffects) {
+            // Only one layer forged: the held bonus is active, the hit effects are still locked.
+            tooltip.add(Component.translatable(PREFIX + "forge.effect_locked")
+                    .withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 
@@ -292,13 +299,25 @@ public class SharpnessWeaponItem extends Item {
         return new double[] {damage, attackSpeed, moveSpeed};
     }
 
-    private static List<String> descriptionKeys(String layer) {
+    /** Tooltip key of the carried ("while held") bonus of a forge layer. */
+    private static String heldKey(String layer) {
         return switch (layer) {
-            case Forge.CHORUS -> List.of(PREFIX + "forge.chorus.held", PREFIX + "forge.chorus.effect");
-            case Forge.CREEPER -> List.of(PREFIX + "forge.creeper.held", PREFIX + "forge.creeper.effect");
-            case Forge.RABBIT -> List.of(PREFIX + "forge.rabbit.held", PREFIX + "forge.rabbit.effect");
-            case Forge.ECHO -> List.of(PREFIX + "forge.echo.held", PREFIX + "forge.echo.effect");
-            default -> List.of(PREFIX + "layer.unknown");
+            case Forge.CHORUS -> PREFIX + "forge.chorus.held";
+            case Forge.CREEPER -> PREFIX + "forge.creeper.held";
+            case Forge.RABBIT -> PREFIX + "forge.rabbit.held";
+            case Forge.ECHO -> PREFIX + "forge.echo.held";
+            default -> PREFIX + "layer.unknown";
+        };
+    }
+
+    /** Tooltip key of the on-hit effect of a forge layer (unlocked with the second layer). */
+    private static String effectKey(String layer) {
+        return switch (layer) {
+            case Forge.CHORUS -> PREFIX + "forge.chorus.effect";
+            case Forge.CREEPER -> PREFIX + "forge.creeper.effect";
+            case Forge.RABBIT -> PREFIX + "forge.rabbit.effect";
+            case Forge.ECHO -> PREFIX + "forge.echo.effect";
+            default -> PREFIX + "layer.unknown";
         };
     }
 

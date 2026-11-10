@@ -44,5 +44,6 @@
   "item.bettercombat_neonarsenal.spear": "长枪",
   "tooltip.bettercombat_neonarsenal.forge_colour": "锻刃颜色: #%s",
   "subtitles.bettercombat_neonarsenal.parry": "格挡",
-  "subtitles.bettercombat_neonarsenal.landed": "落地"
+  "subtitles.bettercombat_neonarsenal.landed": "落地",
+  "tooltip.bettercombat_neonarsenal.forge.effect_locked": "命中效果：锻入第二层后开启"
 }

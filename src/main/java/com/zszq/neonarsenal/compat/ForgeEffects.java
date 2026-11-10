@@ -44,6 +44,9 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * Forge-layer combat effects. All cooldowns are stored on the weapon stack with absolute game-time
  * end ticks ({@link WeaponCooldowns}), so dropping/switching the weapon never resets them.
  *
+ * <p>Unlock rule: forging one layer only grants that layer's carried ("while held") bonus; the
+ * on-hit effects below unlock once a second layer is forged (see {@link Forge#hitEffectsActive}).</p>
+ *
  * <ul>
  *   <li><b>Fire charge</b>: hits ignite the target for 8 s (no enchantment glint).</li>
  *   <li><b>Chorus fruit</b>: pull hostiles (20 blocks, line of sight) + 4 s stun; 5 s weapon cooldown.</li>
@@ -143,8 +146,13 @@ public final class ForgeEffects {
             return;
         }
         if (Forge.hasRabbit(weapon) && JumpAttackHandler.isRecentJumpSlam(player)) {
-            // Rabbit layer: jump-slam damage +100%.
+            // Rabbit layer: jump-slam damage +100% (a carried bonus, active from the first layer).
             event.setAmount(event.getAmount() * 2.0F);
+        }
+        if (!Forge.hitEffectsActive(weapon)) {
+            // A single forged layer only grants its carried bonus; the on-hit effects need a second
+            // layer.
+            return;
         }
         if (Forge.hasCreeper(weapon)) {
             try {

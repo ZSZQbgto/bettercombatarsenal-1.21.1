@@ -41,6 +41,14 @@ public final class Forge {
         return layers(stack).contains(layer);
     }
 
+    /**
+     * A single forged layer only grants its carried ("while held") bonus; the on-hit effects of all
+     * forged layers unlock once the weapon has a second layer.
+     */
+    public static boolean hitEffectsActive(ItemStack stack) {
+        return layers(stack).size() >= 2;
+    }
+
     public static boolean canAdd(ItemStack stack, String layer) {
         List<String> current = layers(stack);
         return current.size() < MAX_LAYERS && !current.contains(layer);
@@ -53,6 +61,29 @@ public final class Forge {
         List<String> current = new java.util.ArrayList<>(layers(stack));
         current.add(layer);
         stack.set(ModDataComponents.FORGE.get(), String.join(",", current));
+        updateRarity(stack);
+    }
+
+    /** {@return the rarity tiers granted by the current layers: one tier per two forged layers}. */
+    public static int rarityTiers(ItemStack stack) {
+        return layers(stack).size() / 2;
+    }
+
+    /**
+     * Applies the forge rarity bonus: one rarity tier per two forged layers (layers 0-1 stay
+     * COMMON, layers 2-3 give UNCOMMON, and so on up to EPIC), stored in
+     * {@code DataComponents.RARITY} so the item name colour follows it. The grindstone wipe removes
+     * the component again.
+     */
+    public static void updateRarity(ItemStack stack) {
+        int tiers = rarityTiers(stack);
+        if (tiers <= 0) {
+            stack.remove(net.minecraft.core.component.DataComponents.RARITY);
+            return;
+        }
+        net.minecraft.world.item.Rarity[] values = net.minecraft.world.item.Rarity.values();
+        stack.set(net.minecraft.core.component.DataComponents.RARITY,
+                values[Math.min(values.length - 1, tiers)]);
     }
 
     /**
