@@ -26,6 +26,7 @@
 ## 从源码构建
 
 - 需要 **Java 21**；首次构建需要联网下载 Gradle、NeoForge 与 Minecraft 资源。
+- 可选编译依赖（Better Combat / JEI / Player Animation Library）放在 `run/mods`，本地首次构建前需自备；CI 会自动下载固定版本。
 - 构建：`./gradlew build`（Windows：`gradlew.bat build`），产物在 `build/libs/bettercombat_neonarsenal-alpha1.jar`。
 - 仓库内的 `gradle.properties` **不包含代理配置**，GitHub Actions 会直连构建。本地需要代理时请写到用户级 `~/.gradle/gradle.properties`（Windows：`%USERPROFILE%\.gradle\gradle.properties`；不要提交到仓库）：
 
@@ -38,6 +39,7 @@
 
   也可以改用 `GRADLE_OPTS` 传入代理参数。
 - **GitHub Actions**（`.github/workflows/build.yml`）：push 到 `master`/`main`、PR 或手动触发时自动构建并上传 jar；使用 Gradle 依赖缓存，网络失败会自动重试（清理残缺下载、必要时重下 wrapper）。
+- CI 会从 Modrinth CDN 下载固定版本的可选编译依赖（Better Combat 2.4.0+1.21.1、JEI 19.70.0.469、Player Animation Library 2.0.4+1.21.1）到 `run/mods` 后再编译；仓库不提交第三方 jar。下载带 SHA-1 校验与重试，CDN 被墙时请配置上面的代理 Secret。
 - CI 需要代理时，在仓库 **Secrets** 中配置 `HTTPS_PROXY` 或 `HTTP_PROXY`（例如 `http://127.0.0.1:7890`）；工作流会转换成 Gradle `systemProp`，并同时用于 Gradle wrapper 下载。未配置时使用直连。
 
 ## 游戏特色
@@ -208,6 +210,7 @@
 ## Building from source
 
 - **Java 21** is required. The first build downloads Gradle, NeoForge and Minecraft artifacts.
+- Optional compile-time dependencies (Better Combat / JEI / Player Animation Library) go into `run/mods`; a fresh local clone needs them, while CI downloads the pinned versions automatically.
 - Build with `./gradlew build` (`gradlew.bat build` on Windows); the jar is written to `build/libs/bettercombat_neonarsenal-alpha1.jar`.
 - The repository `gradle.properties` **does not contain proxy settings** (GitHub Actions runs without the local proxy). For a local proxy, put it in `~/.gradle/gradle.properties` (Windows: `%USERPROFILE%\.gradle\gradle.properties`), never in the repository:
 
@@ -220,6 +223,7 @@
 
   Alternatively pass the proxy through `GRADLE_OPTS`.
 - **GitHub Actions** (`.github/workflows/build.yml`): builds on pushes to `master`/`main`, pull requests and manual runs, then uploads the jar; Gradle dependency caches are used and transient network failures are retried (partial downloads are cleaned, the wrapper is re-downloaded when needed).
+- CI downloads pinned optional compile-time dependencies (Better Combat 2.4.0+1.21.1, JEI 19.70.0.469, Player Animation Library 2.0.4+1.21.1) from the Modrinth CDN into `run/mods` before compiling; third-party jars are not committed. Downloads are SHA-1 verified and retried; configure the proxy Secret above if the CDN is blocked.
 - If CI needs a proxy, set `HTTPS_PROXY` or `HTTP_PROXY` as a repository **Secret** (for example `http://127.0.0.1:7890`); the workflow converts it to Gradle `systemProp` settings and also uses it for the Gradle wrapper download. Without it the build connects directly.
 
 ## Features

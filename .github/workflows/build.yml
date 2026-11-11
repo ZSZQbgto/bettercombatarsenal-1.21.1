@@ -35,6 +35,55 @@ jobs:
           java-version: '21'
 
       # Run before the first Gradle invocation so the proxy also covers the Gradle wrapper download.
+      # The optional compile-time mods (Better Combat, JEI, Player Animator) are not committed:
+      # download the exact versions used by the local dev environment into the ignored run/mods
+      # folder so the Gradle `compileOnly fileTree(...)` dependencies resolve on CI too.
+      - name: Download compile-time mod dependencies
+        shell: bash
+        env:
+          # Optional CI proxy: set HTTPS_PROXY (or HTTP_PROXY) as a repository/environment secret,
+          # e.g. http://127.0.0.1:7890. Leave unset for a direct connection.
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+        run: |
+          set -euo pipefail
+          # curl needs HTTPS_PROXY for https URLs; fall back to HTTP_PROXY if only that is set.
+          export HTTPS_PROXY="${HTTPS_PROXY:-${HTTP_PROXY:-}}"
+          mkdir -p run/mods
+          fetch() {
+            local url="$1"
+            local out="$2"
+            local sha1="$3"
+            echo "Downloading $(basename "$out")"
+            for attempt in 1 2 3 4 5; do
+              rm -f "$out"
+              if curl -fL --retry 3 --retry-delay 5 --retry-all-errors \
+                  --connect-timeout 30 --max-time 600 -o "$out" "$url" \
+                  && echo "$sha1  $out" | sha1sum -c -; then
+                return 0
+              fi
+              echo "Attempt ${attempt} failed; retrying..."
+              sleep $((attempt * 5))
+            done
+            return 1
+          }
+          # Better Combat 2.4.0+1.21.1
+          fetch \
+            'https://cdn.modrinth.com/data/5sy6g3kz/versions/VhIOvcXP/bettercombat-neoforge-2.4.0%2B1.21.1.jar' \
+            'run/mods/bettercombat-neoforge-2.4.0+1.21.1.jar' \
+            'bacbc8c86671663e9998b141c5732250c1f4d4fb'
+          # JEI 19.70.0.469 (NeoForge 1.21.1)
+          fetch \
+            'https://cdn.modrinth.com/data/u6dRKJwZ/versions/1vC6z8wV/jei-1.21.1-neoforge-19.70.0.469.jar' \
+            'run/mods/jei-1.21.1-neoforge-19.70.0.469.jar' \
+            '363f10ce1d8918381a125cc1e8d800caf1bcb40e'
+          # Player Animation Library 2.0.4+1.21.1 (Forge/NeoForge)
+          fetch \
+            'https://cdn.modrinth.com/data/gedNE4y2/versions/HJZB6bmA/player-animation-lib-forge-2.0.4%2B1.21.1.jar' \
+            'run/mods/player-animation-lib-forge-2.0.4+1.21.1.jar' \
+            '05be8ddcc78532b9a5520c718edc6c971cd0057c'
+          ls -l run/mods
+
       - name: Configure Gradle for CI
         shell: bash
         env:
