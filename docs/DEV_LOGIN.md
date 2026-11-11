@@ -33,5 +33,19 @@
 - 用真实账号登录后 UUID 与离线 `Dev` 账号不同，`run/saves` 里原来离线存档的玩家数据不会继承，
   联机测试请新开存档或直接进服务器。
 - 微软登录接口访问不畅时，可以打开 `build.gradle` 里 `clientAuth` 下的
-  `-Dhttps.proxyHost` / `-Dhttps.proxyPort` 两行注释（端口与本项目 `gradle.properties` 的代理一致）。
+  `-Dhttps.proxyHost` / `-Dhttps.proxyPort` 两行注释（端口填本机代理端口；仓库的 `gradle.properties` 已不再保存代理配置）。
 - 普通 `Client` 运行配置保持离线模式不变，可随时切回。
+
+## 常见问题：could not open build/moddev/clientAuthRunVmArgs.txt
+
+`./gradlew clean` 会删除 `build/moddev` 下由 `prepareClientRun` / `prepareClientAuthRun` 生成的文件；
+如果 IDE 的 Gradle 配置缓存仍复用旧任务图，直接启动运行配置时就会报这个错（`clientRunVmArgs.txt` 同理）。
+
+修复（在项目目录执行一次）：
+
+```bash
+./gradlew prepareClientRun prepareClientAuthRun
+```
+
+然后重新运行 IDE 中的 `Client` / `Client (正版登录)` 配置即可；若仍复用旧状态，先 `./gradlew --stop`，
+或在 IDE 的 Gradle 面板点「Reload Gradle Project」。日常开发建议直接 `./gradlew build`，不要在启动游戏前执行 `clean`。

@@ -1,0 +1,162 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Gradle build (Java 21)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        env:
+          # Optional CI proxy (repository secret or variable), e.g. http://127.0.0.1:7890.
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Run before the first Gradle invocation so the proxy also covers the Gradle wrapper download.
+      - name: Configure Gradle for CI
+        shell: bash
+        env:
+          # Optional CI proxy: set HTTPS_PROXY (or HTTP_PROXY) as a repository/environment secret,
+          # e.g. http://127.0.0.1:7890. Leave unset for a direct connection.
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+
+          gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_home"
+          props="$gradle_home/gradle.properties"
+
+          # CI-only settings; the repository gradle.properties stays free of proxy settings.
+          {
+            echo "# Added by .github/workflows/build.yml"
+            echo "org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=1G"
+            echo "org.gradle.daemon=false"
+          } >> "$props"
+
+          # Longer timeouts and a few retries for flaky Maven/Minecraft downloads. Kept here (and
+          # exported through GITHUB_ENV) so a job-level default cannot override the proxy values
+          # added below.
+          export GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000 -Dorg.gradle.internal.repository.max.tentatives=3"
+
+          proxy="${HTTPS_PROXY:-}"
+          if [ -z "$proxy" ]; then
+            proxy="${HTTP_PROXY:-}"
+          fi
+          if [ -n "$proxy" ]; then
+            # Accept http(s)://[user:pass@]host[:port] and bare host:port.
+            proxy="${proxy#*://}"
+            proxy="${proxy%%/*}"
+            if [[ "$proxy" == *"@"* ]]; then
+              proxy="${proxy#*@}"
+            fi
+            host="${proxy%%:*}"
+            port="${proxy##*:}"
+            if [ "$port" = "$proxy" ]; then
+              port=443
+            fi
+            {
+              echo "systemProp.http.proxyHost=$host"
+              echo "systemProp.http.proxyPort=$port"
+              echo "systemProp.https.proxyHost=$host"
+              echo "systemProp.https.proxyPort=$port"
+            } >> "$props"
+
+            # Also cover the Gradle wrapper distribution download, which happens before Gradle
+            # reads the user-home properties.
+            export GRADLE_OPTS="$GRADLE_OPTS -Dhttp.proxyHost=$host -Dhttp.proxyPort=$port -Dhttps.proxyHost=$host -Dhttps.proxyPort=$port"
+            echo "Gradle proxy enabled for $host:$port"
+          else
+            echo "No proxy configured; using a direct connection."
+          fi
+          echo "GRADLE_OPTS=$GRADLE_OPTS" >> "$GITHUB_ENV"
+
+          echo "Java:"
+          java -version 2>&1
+
+      # Use GitHub's own cache directly (no extra Gradle cache service / action download):
+      # this covers the Gradle wrapper distribution, dependencies and transforms.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'build.gradle', 'settings.gradle', 'gradle.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Build
+        shell: bash
+        env:
+          # Optional CI proxy (repository secret or variable), e.g. http://127.0.0.1:7890.
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+        run: |
+          set -u
+          gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          for attempt in 1 2 3; do
+            echo "::group::Gradle build attempt ${attempt}/3"
+            if ./gradlew build --no-daemon --console=plain --stacktrace; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "Attempt ${attempt} failed; removing partial downloads before retrying..."
+              find "$gradle_home/caches/modules-2" -name '*.part' -delete 2>/dev/null || true
+              find "$gradle_home/caches/modules-2" -name '*.lock' -delete 2>/dev/null || true
+              find "$gradle_home/wrapper/dists" -name '*.part' -delete 2>/dev/null || true
+              find "$gradle_home/wrapper/dists" -name '*.lck' -delete 2>/dev/null || true
+              if [ "$attempt" -eq 2 ]; then
+                # A broken wrapper distribution is the usual cause of repeated startup failures.
+                rm -rf "$gradle_home/wrapper/dists"
+              fi
+              sleep $((attempt * 15))
+            fi
+          done
+          exit 1
+
+      - name: Upload built jars
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bettercombat_neonarsenal-jars
+          path: build/libs/*.jar
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload build reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            build/reports/
+            build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

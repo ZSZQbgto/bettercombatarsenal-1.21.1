@@ -1,5 +1,7 @@
 # 更好的战斗：霓虹装备
 
+[![Build](https://github.com/ZSZQbgto/bettercombatarsenal-1.21.1/actions/workflows/build.yml/badge.svg)](https://github.com/ZSZQbgto/bettercombatarsenal-1.21.1/actions/workflows/build.yml)
+
 [中文](#更好的战斗霓虹装备) | [English](#english)
 
 > 极光工业新一代作战套件：8 把武器、会变钝的刀口、4 种锻刃材料、2 个效果开关、任意染料染色。
@@ -20,6 +22,23 @@
 1. 装好前置，进游戏做铁砧。
 2. **武器 + 材料**：锻刃；**武器 + 蜜脾**：修锋利度；**武器 + 染料**：染色。
 3. 想换工艺配置：把武器放进砂轮，一次抹干净，锋利度保留。
+
+## 从源码构建
+
+- 需要 **Java 21**；首次构建需要联网下载 Gradle、NeoForge 与 Minecraft 资源。
+- 构建：`./gradlew build`（Windows：`gradlew.bat build`），产物在 `build/libs/bettercombat_neonarsenal-alpha1.jar`。
+- 仓库内的 `gradle.properties` **不包含代理配置**，GitHub Actions 会直连构建。本地需要代理时请写到用户级 `~/.gradle/gradle.properties`（Windows：`%USERPROFILE%\.gradle\gradle.properties`；不要提交到仓库）：
+
+  ```properties
+  systemProp.http.proxyHost=127.0.0.1
+  systemProp.http.proxyPort=7890
+  systemProp.https.proxyHost=127.0.0.1
+  systemProp.https.proxyPort=7890
+  ```
+
+  也可以改用 `GRADLE_OPTS` 传入代理参数。
+- **GitHub Actions**（`.github/workflows/build.yml`）：push 到 `master`/`main`、PR 或手动触发时自动构建并上传 jar；使用 Gradle 依赖缓存，网络失败会自动重试（清理残缺下载、必要时重下 wrapper）。
+- CI 需要代理时，在仓库 **Secrets** 中配置 `HTTPS_PROXY` 或 `HTTP_PROXY`（例如 `http://127.0.0.1:7890`）；工作流会转换成 Gradle `systemProp`，并同时用于 Gradle wrapper 下载。未配置时使用直连。
 
 ## 游戏特色
 
@@ -185,6 +204,23 @@
 1. Install the requirements and craft an anvil.
 2. **Weapon + material**: forge; **weapon + honeycomb**: repair sharpness; **weapon + dye**: colour.
 3. To reroll: put the weapon in a grindstone; one wipe clears everything but sharpness.
+
+## Building from source
+
+- **Java 21** is required. The first build downloads Gradle, NeoForge and Minecraft artifacts.
+- Build with `./gradlew build` (`gradlew.bat build` on Windows); the jar is written to `build/libs/bettercombat_neonarsenal-alpha1.jar`.
+- The repository `gradle.properties` **does not contain proxy settings** (GitHub Actions runs without the local proxy). For a local proxy, put it in `~/.gradle/gradle.properties` (Windows: `%USERPROFILE%\.gradle\gradle.properties`), never in the repository:
+
+  ```properties
+  systemProp.http.proxyHost=127.0.0.1
+  systemProp.http.proxyPort=7890
+  systemProp.https.proxyHost=127.0.0.1
+  systemProp.https.proxyPort=7890
+  ```
+
+  Alternatively pass the proxy through `GRADLE_OPTS`.
+- **GitHub Actions** (`.github/workflows/build.yml`): builds on pushes to `master`/`main`, pull requests and manual runs, then uploads the jar; Gradle dependency caches are used and transient network failures are retried (partial downloads are cleaned, the wrapper is re-downloaded when needed).
+- If CI needs a proxy, set `HTTPS_PROXY` or `HTTP_PROXY` as a repository **Secret** (for example `http://127.0.0.1:7890`); the workflow converts it to Gradle `systemProp` settings and also uses it for the Gradle wrapper download. Without it the build connects directly.
 
 ## Features
 
