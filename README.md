@@ -32,16 +32,18 @@
 
 ### 2. 四种锻刃材料
 
-铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 **6 层**，**同种材料最多锻 2 次**（第 2 次开启该材料的命中效果），**每 2 层稀有度 +1 阶**（0–1 层普通/白，2–3 层罕见/黄，4–5 层稀有/青，6 层史诗/紫）。
+铁砧中武器 + 材料，8 级经验、1:1 消耗；武器最多 **6 层**，**同种材料最多锻 5 次**；同种材料锻入 **3 层**开启该材料的命中效果，满 **5 层**时该材料命中效果冷却减半；**每 2 层稀有度 +1 阶**（0–1 层普通/白，2–3 层罕见/黄，4–5 层稀有/青，6 层史诗/紫）。每锻入一层额外获得 **+2% 暴击率**（暴击伤害 ×1.5）。
 
-| 材料 | 随身效果 | 命中效果 | 冷却 |
+| 材料 | 锻层加成（Lv1 → Lv5） | 命中效果 | 冷却 |
 |---|---|---|---|
-| 紫颂果 | 伤害 +10%、移速 +15% | 20 格内敌人拉进攻击范围，僵直 4 秒 | 10 秒 |
-| 苦力怕头颅 | 伤害 +5%、攻速 +15% | 无敌苦力怕（免疫伤害与击退）像原版躲避猫一样用 `AvoidEntityGoal` **真实寻路**远离玩家（4 秒，半径 24 格、1.2 冲刺速度），并强吸敌对生物，随后原地白色闪烁 1.4 秒并爆炸（不破坏地形、仅伤敌对，dummmmmmy 人偶除外） | 30 秒 |
-| 兔子脚 | 攻速 +5%、跳跃高度 +150%、跃斩增伤 +100% | 4 只无敌雷霆大兔子（免疫伤害与击退），每 0.5 秒咬 3 个目标各 4 伤害，10 秒后消失 | 30 秒 |
-| 回响碎片 | 攻速 -50%、伤害 +100% | 8 格内敌人互相攻击 8 秒 | 30 秒 |
+| 紫颂果 | 伤害 +10% → +115%、移速 +2% → +10% | 20 格内敌人拉进攻击范围，僵直 4 秒 | 10 秒（满 5 层 5 秒） |
+| 苦力怕头颅 | 攻速 +5% → +40%、伤害 +5% → +40% | 无敌苦力怕（免疫伤害与击退）像原版躲避猫一样用 `AvoidEntityGoal` **真实寻路**远离玩家（4 秒，半径 24 格、1.2 冲刺速度），并强吸敌对生物，随后原地白色闪烁 1.4 秒并爆炸（不破坏地形、仅伤敌对，dummmmmmy 人偶除外） | 30 秒（满 5 层 15 秒） |
+| 兔子脚 | 攻速 +5% → +40%、伤害 +4% → +35%、跳跃高度 +30% → +150%、跃斩增伤 +20% → +100% | 4 只无敌雷霆大兔子（免疫伤害与击退），每 0.5 秒咬 3 个目标各 4 伤害，10 秒后消失 | 30 秒（满 5 层 15 秒） |
+| 回响碎片 | 攻速 -50%（固定）、伤害 +60% → +300% | 8 格内敌人互相攻击 8 秒 | 30 秒（满 5 层 15 秒） |
 
-**解锁规则**：每种材料锻入 1 次只生效其「随身效果」；**同种材料再锻入第 2 次**才开启该材料的「命中效果」（每种材料最多 2 层，武器总共最多 6 层，可混搭不同材料）。Shift 详情在只锻入 1 次时显示「命中效果：同种材料再锻入一次后开启」。
+**成长规则**：材料层数（1–5 阶）按各自成长表成长，完整数值见 `docs/FORGING_SPEC.md` §4.5；每层额外 **+2% 暴击率**，暴击造成 **×1.5** 伤害（原版暴击的粒子/音效）。
+
+**解锁规则**：每种材料锻入 1–2 层只生效「锻层加成」；**同种材料锻入第 3 层**才开启该材料的「命中效果」；同种材料满 5 层时该效果冷却减半。每种材料最多 5 层，武器总共最多 6 层，可混搭不同材料。Shift 详情在未达 3 层时显示「命中效果：同种材料锻入 3 层后开启」。
 
 ### 3. 两个开关
 
@@ -109,14 +111,16 @@
 
 | 武器 | ID | 攻速 | 伤害 | DPS | 跳劈 | 格挡 | 下落斩击 | 鞘翅斩击 | 定位 |
 |---|---|---|---|---|---|---|---|---|---|
-| 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | ✓ | ✓ | — | — | 单手，最稳 |
-| 阔剑 | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | ✓ | ✓ | ✓ | ✓ | 双手，+0.35 距离 |
-| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | ✓ | ✓ | ✓ | ✓ | 双手连段 |
-| 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | ✓ | ✓ | ✓ | ✓ | 双手旋转斩 |
-| 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | ✓ | ✓ | ✓ | ✓ | 双手拔刀斩 |
-| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | ✓ | ✓ | — | — | 单手快刺 |
-| 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | 单手短刃，纯输出 |
-| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | 双手，+1 距离，**冲锋前刺** |
+| 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 5.0 | 8.0 | ✓ | ✓ | — | — | 单手，最稳 |
+| 阔剑 | `bettercombat_neonarsenal:claymore` | 0.8 | 11.5 | 9.2 | ✓ | ✓ | ✓ | ✓ | 双手，+0.35 距离 |
+| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 7.0 | 9.8 | ✓ | ✓ | ✓ | ✓ | 双手连段 |
+| 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 15.0 | 9.0 | ✓ | ✓ | ✓ | ✓ | 双手旋转斩 |
+| 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 8.5 | 9.4 | ✓ | ✓ | ✓ | ✓ | 双手拔刀斩 |
+| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 4.0 | 10.0 | ✓ | ✓ | — | — | 单手快刺 |
+| 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 3.0 | 9.6 | — | — | — | — | 单手短刃，纯输出 |
+| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 7.0 | 8.4 | ✓ | ✓ | — | — | 双手，+1 距离，**冲锋前刺** |
+
+（DPS = 基础伤害 × 攻速。）
 
 ### 8. 附魔
 
@@ -149,7 +153,7 @@
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
 - **Tooltip**：平时显示刀刃锐度、颜色、附魔数值加成与锻刃百分比加成；按住 Shift 看附魔明细、综合性能与每层说明。
 - **配置**：模组列表滑条——粒子密度 0–3、刀刃发光强度 0–1。
-- **JEI**：208 条锻刃配方（含同种材料第 2 次锻造），铁砧为催化剂。
+- **JEI**：272 条锻刃配方（展示第 1/2/3/5 次锻造示例；第 3–6 层可继续在铁砧中锻造），铁砧为催化剂。
 - **多人**：锻刃、冷却与粒子效果在多人联机下保持一致。
 
 ## 许可
@@ -193,16 +197,18 @@
 
 ### 2. Four forge materials
 
-Anvil weapon + material: 8 levels, 1:1, up to **6 layers**, **each material can be forged twice** (the second copy unlocks that material's on-hit effect), **+1 rarity per 2 layers** (layers 0-1 COMMON/white, 2-3 UNCOMMON/yellow, 4-5 RARE/aqua, 6 EPIC/light purple).
+Anvil weapon + material: 8 levels, 1:1, up to **6 layers**; **each material can be forged up to five times**; a material's on-hit effect unlocks at **3 layers** and its cooldown is **halved at the full 5 layers**; **+1 rarity per 2 layers** (layers 0-1 COMMON/white, 2-3 UNCOMMON/yellow, 4-5 RARE/aqua, 6 EPIC/light purple). Each forged layer also grants **+2% crit chance** (x1.5 crit damage).
 
-| Material | While held | On hit | Cooldown |
+| Material | Layer bonus (Lv1 -> Lv5) | On hit | Cooldown |
 |---|---|---|---|
-| Chorus Fruit | +10% damage, +15% move speed | Pull mobs within 20 blocks into range, stun 4 s | 10 s |
-| Creeper Head | +5% damage, +15% attack speed | An invulnerable creeper flees the player with **real pathfinding** using vanilla creeper-vs-cat `AvoidEntityGoal` (4 s, radius 24, sprint 1.2), pulls mobs, then flashes in place for 1.4 s and explodes | 30 s |
-| Rabbit's Foot | +5% attack speed, +150% jump height, +100% jump-slam damage | Four invulnerable thunder rabbits (immune to damage and knockback) bite 3 targets for 4 damage every 0.5 s, vanish after 10 s | 30 s |
-| Echo Shard | -50% attack speed, +100% damage | Mobs within 8 blocks fight each other for 8 s | 30 s |
+| Chorus Fruit | +10% -> +115% damage, +2% -> +10% move speed | Pull mobs within 20 blocks into range, stun 4 s | 10 s (5 s at 5 layers) |
+| Creeper Head | +5% -> +40% attack speed, +5% -> +40% damage | An invulnerable creeper flees the player with **real pathfinding** using vanilla creeper-vs-cat `AvoidEntityGoal` (4 s, radius 24, sprint 1.2), pulls mobs, then flashes in place for 1.4 s and explodes | 30 s (15 s at 5 layers) |
+| Rabbit's Foot | +5% -> +40% attack speed, +4% -> +35% damage, +30% -> +150% jump height, +20% -> +100% jump-slam damage | Four invulnerable thunder rabbits bite 3 targets for 4 damage every 0.5 s, vanish after 10 s | 30 s (15 s at 5 layers) |
+| Echo Shard | -50% attack speed (fixed), +60% -> +300% damage | Mobs within 8 blocks fight each other for 8 s | 30 s (15 s at 5 layers) |
 
-**Unlock rule**: forging one copy of a material only grants that material's "while held" bonus; **a second copy of the same material** unlocks its "on hit" effect (each material can be forged twice, up to 6 layers per weapon, different materials can be mixed). While only one copy is forged, the Shift details show "On-hit effect: forge a second copy of this material to unlock".
+**Growth rule**: a material's level (1-5 = number of copies) follows the unified exponential table in `docs/FORGING_SPEC.md` section 4.5. Every layer also grants **+2% crit chance** for **x1.5** critical damage (vanilla crit particles/sound).
+
+**Unlock rule**: one or two copies of a material only grant its layer bonus; **the 3rd copy** unlocks its "on hit" effect, and the full 5 copies halve that effect's cooldown. Each material can be forged up to five times, up to 6 layers per weapon, different materials can be mixed. Below 3 copies the Shift details show "On-hit effect: forge 3 copies of this material to unlock".
 
 ### 3. Two switches
 
@@ -282,14 +288,16 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**, **each material can 
 
 | Weapon | ID | Speed | Damage | DPS | Jump slam | Block | Falling slash | Elytra slash | Role |
 |---|---|---|---|---|---|---|---|---|---|
-| Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 6.3 | 10 | ✓ | ✓ | — | — | One-handed, steady |
-| Broadsword | `bettercombat_neonarsenal:claymore` | 0.8 | 15.0 | 12 | ✓ | ✓ | ✓ | ✓ | Two-handed, +0.35 reach |
-| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 9.2 | 12.9 | ✓ | ✓ | ✓ | ✓ | Two-handed combo |
-| Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 20.0 | 12 | ✓ | ✓ | ✓ | ✓ | Two-handed spin |
-| Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 11.0 | 12.1 | ✓ | ✓ | ✓ | ✓ | Two-handed draw slashes |
-| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 5.0 | 12.5 | ✓ | ✓ | — | — | One-handed fast thrusts |
-| Dagger | `bettercombat_neonarsenal:dagger` | 3.2 | 4.0 | 12.8 | — | — | — | — | One-handed short blade, pure damage |
-| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 9.2 | 11.0 | ✓ | ✓ | — | — | Two-handed, +1 reach, **charge thrust** |
+| Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 5.0 | 8.0 | ✓ | ✓ | — | — | One-handed, steady |
+| Broadsword | `bettercombat_neonarsenal:claymore` | 0.8 | 11.5 | 9.2 | ✓ | ✓ | ✓ | ✓ | Two-handed, +0.35 reach |
+| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 7.0 | 9.8 | ✓ | ✓ | ✓ | ✓ | Two-handed combo |
+| Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 15.0 | 9.0 | ✓ | ✓ | ✓ | ✓ | Two-handed spin |
+| Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 8.5 | 9.4 | ✓ | ✓ | ✓ | ✓ | Two-handed draw slashes |
+| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 4.0 | 10.0 | ✓ | ✓ | — | — | One-handed fast thrusts |
+| Dagger | `bettercombat_neonarsenal:dagger` | 3.2 | 3.0 | 9.6 | — | — | — | — | One-handed short blade, pure damage |
+| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 7.0 | 8.4 | ✓ | ✓ | — | — | Two-handed, +1 reach, **charge thrust** |
+
+(Base damage is unified to **3/4** of the previous value and rounded **up to the next 0.5**; DPS = base damage x attack speed.)
 
 ### 9. Charge thrust (mounted spear)
 
@@ -309,7 +317,7 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**, **each material can 
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.
 - **Tooltip**: shows blade sharpness, colour, numeric enchantment/forge bonuses by default; hold Shift for enchantment details, totals and per-layer text.
 - **Config**: mod-list sliders — particle density 0–3, blade glow intensity 0–1.
-- **JEI**: 208 forging recipes (including the second copy of each material) with the anvil as catalyst.
+- **JEI**: 272 forging recipes (first/second/third/fifth-copy examples; layers 3-6 are still forged at the anvil) with the anvil as catalyst.
 - **Multiplayer**: forging, cooldowns and particle effects stay consistent in multiplayer.
 
 ## License

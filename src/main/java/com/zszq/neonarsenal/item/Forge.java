@@ -10,8 +10,10 @@ import net.minecraft.world.item.ItemStack;
 public final class Forge {
 
     public static final int MAX_LAYERS = 6;
-    /** Each material can be forged at most twice: the second copy unlocks its on-hit effect. */
-    public static final int MAX_LEVEL = 2;
+    /** Each material can be forged up to five times; its stat bonuses scale with this level. */
+    public static final int MAX_LEVEL = 5;
+    /** Same-material layer count that unlocks that material's on-hit effect. */
+    public static final int HIT_EFFECT_LEVEL = 3;
     public static final String CHORUS = "chorus";
     public static final String CREEPER = "creeper";
     public static final String RABBIT = "rabbit";
@@ -69,11 +71,16 @@ public final class Forge {
     }
 
     /**
-     * Forging one copy of a material only grants its carried ("while held") bonus; the material's
-     * on-hit effect unlocks once the same material has been forged a second time.
+     * Forging one or two copies of a material only grants its carried ("while held") bonus; the
+     * material's on-hit effect unlocks once the same material has been forged three times.
      */
     public static boolean hitEffectActive(ItemStack stack, String layer) {
-        return level(stack, layer) >= 2;
+        return level(stack, layer) >= HIT_EFFECT_LEVEL;
+    }
+
+    /** {@return the on-hit cooldown of a layer, halved once that material is forged to max level}. */
+    public static int cooldownTicks(ItemStack stack, String layer, int baseTicks) {
+        return level(stack, layer) >= MAX_LEVEL ? Math.max(1, baseTicks / 2) : baseTicks;
     }
 
     public static boolean canAdd(ItemStack stack, String layer) {

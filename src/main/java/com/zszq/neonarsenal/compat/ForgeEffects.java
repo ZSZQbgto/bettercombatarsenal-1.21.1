@@ -9,6 +9,7 @@ import java.util.WeakHashMap;
 
 import com.zszq.neonarsenal.NeonArsenal;
 import com.zszq.neonarsenal.item.Forge;
+import com.zszq.neonarsenal.item.ForgeStats;
 import com.zszq.neonarsenal.item.SharpnessWeaponItem;
 import com.zszq.neonarsenal.item.WeaponCooldowns;
 
@@ -43,18 +44,23 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * Forge-layer combat effects. All cooldowns are stored on the weapon stack with absolute game-time
  * end ticks ({@link WeaponCooldowns}), so dropping/switching the weapon never resets them.
  *
- * <p>Unlock rule: forging one copy of a material only grants that material's carried ("while held")
- * bonus; the material's on-hit effect unlocks once the same material has been forged a second time
- * (see {@link Forge#hitEffectActive}). Held bonuses are applied once per material.</p>
+ * <p>Unlock rule: forging one or two copies of a material only grants that material's carried
+ * ("while held") bonus; the material's on-hit effect unlocks at three copies and the cooldown is
+ * halved at the full five copies (see {@link Forge#hitEffectActive}, {@link Forge#cooldownTicks}).
+ * Held bonuses scale per material level through {@link ForgeStats}; every forged layer also grants
+ * +2% critical chance.</p>
  *
  * <ul>
- *   <li><b>Chorus fruit</b>: pull hostiles (20 blocks, line of sight) + 4 s stun; 5 s weapon cooldown.</li>
- *   <li><b>Creeper head</b>: spawns a creeper that walks away from the player for 4 s while pulling
- *       living mobs within 6 blocks along its path, then swells/flashes white for 1.4 s and explodes
- *       (no terrain damage, hostiles only, half TNT damage); 8 s weapon cooldown.</li>
- *   <li><b>Rabbit foot</b>: while held +30% attack speed and +20% movement speed; hits summon four
- *       2-block-tall invulnerable rabbits that attack one hostile every 2 s for 8 damage and vanish
- *       after 10 s; 30 s weapon cooldown.</li>
+ *   <li><b>Chorus fruit</b>: pull hostiles (20 blocks, line of sight) + 4 s stun; 10 s weapon cooldown
+ *       (5 s at five layers).</li>
+ *   <li><b>Creeper head</b>: spawns a creeper that pathfinds away from the player for 4 s while
+ *       pulling living mobs within 6 blocks, then swells/flashes white for 1.4 s and explodes
+ *       (no terrain damage, hostiles only); 30 s weapon cooldown (15 s at five layers).</li>
+ *   <li><b>Rabbit foot</b>: held jump height / jump-slam damage scale with its level; hits summon
+ *       four 2-block-tall invulnerable rabbits that attack hostiles for 4 damage each; 30 s weapon
+ *       cooldown (15 s at five layers).</li>
+ *   <li><b>Echo shard</b>: fixed -50% attack speed, damage scales with level; hostiles fight each
+ *       other for 8 s; 30 s weapon cooldown (15 s at five layers).</li>
  * </ul>
  */
 public final class ForgeEffects {
@@ -152,10 +158,11 @@ public final class ForgeEffects {
             return;
         }
         if (Forge.hasRabbit(weapon) && JumpAttackHandler.isRecentJumpSlam(player)) {
-            // Rabbit layer: jump-slam damage +100% (a carried bonus, active from the first copy).
-            event.setAmount(event.getAmount() * 2.0F);
+            // Rabbit layer: jump-slam damage scales with the rabbit level (+20% ... +100%).
+            event.setAmount(event.getAmount()
+                    * (float) (1.0D + ForgeStats.of(weapon).jumpSlam()));
         }
-        // A material's on-hit effect unlocks once that same material has been forged a second time.
+        // A material's on-hit effect unlocks once that same material has been forged three times.
         if (Forge.hitEffectActive(weapon, Forge.CREEPER)) {
             try {
                 triggerCreeper(player, weapon, event.getEntity());
@@ -184,6 +191,26 @@ public final class ForgeEffects {
                 NeonArsenal.LOGGER.warn("Echo forge effect failed", throwable);
             }
         }
+        applyCrit(player, weapon, event);
+    }
+
+    /** Forge critical hit: +2% chance per layer, 1.5x damage with the vanilla crit particles/sound. */
+    private static void applyCrit(Player player, ItemStack weapon,
+                                  net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        double chance = ForgeStats.critChance(weapon);
+        if (chance <= 0.0D || player.getRandom().nextDouble() >= chance) {
+            return;
+        }
+        event.setAmount(event.getAmount() * 1.5F);
+        if (player.level() instanceof ServerLevel level) {
+            LivingEntity target = event.getEntity();
+            level.sendParticles(ParticleTypes.CRIT,
+                    target.getX(), target.getY() + target.getBbHeight() * 0.5D, target.getZ(),
+                    12, 0.4D, 0.4D, 0.4D, 0.2D);
+            level.playSound(null, target.getX(), target.getY(), target.getZ(),
+                    net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_CRIT,
+                    net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+        }
     }
 
     private static void triggerChorus(Player player, ItemStack weapon) {
@@ -191,7 +218,8 @@ public final class ForgeEffects {
         if (!WeaponCooldowns.ready(weapon, CD_CHORUS, now)) {
             return;
         }
-        WeaponCooldowns.start(weapon, CD_CHORUS, now + CHORUS_COOLDOWN_TICKS);
+        WeaponCooldowns.start(weapon, CD_CHORUS,
+                now + Forge.cooldownTicks(weapon, Forge.CHORUS, CHORUS_COOLDOWN_TICKS));
         ServerLevel level = (ServerLevel) player.level();
         var mobs = level.getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().inflate(TELEPORT_RANGE),
@@ -233,7 +261,8 @@ public final class ForgeEffects {
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }
-        WeaponCooldowns.start(weapon, CD_CREEPER, now + CREEPER_COOLDOWN_TICKS);
+        WeaponCooldowns.start(weapon, CD_CREEPER,
+                now + Forge.cooldownTicks(weapon, Forge.CREEPER, CREEPER_COOLDOWN_TICKS));
         Vec3 spawn = target != null ? target.position() : player.position().add(player.getLookAngle().scale(2.0D));
         Creeper creeper = EntityType.CREEPER.create(level);
         if (creeper == null) {
@@ -272,7 +301,8 @@ public final class ForgeEffects {
         if (mobs.size() < 2) {
             return;
         }
-        WeaponCooldowns.start(weapon, CD_ECHO, now + ECHO_COOLDOWN_TICKS);
+        WeaponCooldowns.start(weapon, CD_ECHO,
+                now + Forge.cooldownTicks(weapon, Forge.ECHO, ECHO_COOLDOWN_TICKS));
         for (LivingEntity mob : mobs) {
             FRENZY_UNTIL.put(mob, now + ECHO_FRENZY_TICKS);
             level.sendParticles(ParticleTypes.SCULK_SOUL,
@@ -318,7 +348,8 @@ public final class ForgeEffects {
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }
-        WeaponCooldowns.start(weapon, CD_RABBIT, now + RABBIT_COOLDOWN_TICKS);
+        WeaponCooldowns.start(weapon, CD_RABBIT,
+                now + Forge.cooldownTicks(weapon, Forge.RABBIT, RABBIT_COOLDOWN_TICKS));
         for (int i = 0; i < 4; i++) {
             Rabbit rabbit = EntityType.RABBIT.create(level);
             if (rabbit == null) {
@@ -363,34 +394,10 @@ public final class ForgeEffects {
             return;
         }
         LAST_LAYER_KEY.put(id, key);
-        double attackSpeed = 0.0D;
-        double damage = 0.0D;
-        double moveSpeed = 0.0D;
-        if (!key.isEmpty()) {
-            for (String layer : Forge.distinctLayers(weapon)) {
-                switch (layer) {
-                    case Forge.CHORUS -> {
-                        damage += 0.10D;
-                        moveSpeed += 0.15D;
-                    }
-                    case Forge.CREEPER -> {
-                        damage += 0.05D;
-                        attackSpeed += 0.15D;
-                    }
-                    case Forge.RABBIT -> attackSpeed += 0.05D;
-                    case Forge.ECHO -> {
-                        attackSpeed -= 0.50D;
-                        damage += 1.00D;
-                    }
-                    default -> {
-                        // No held bonus.
-                    }
-                }
-            }
-        }
-        applyModifier(player.getAttribute(Attributes.ATTACK_SPEED), ATTACK_SPEED_ID, attackSpeed);
-        applyModifier(player.getAttribute(Attributes.ATTACK_DAMAGE), DAMAGE_ID, damage);
-        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), MOVE_SPEED_ID, moveSpeed);
+        ForgeStats.Stats stats = ForgeStats.of(weapon);
+        applyModifier(player.getAttribute(Attributes.ATTACK_SPEED), ATTACK_SPEED_ID, stats.attackSpeed());
+        applyModifier(player.getAttribute(Attributes.ATTACK_DAMAGE), DAMAGE_ID, stats.damage());
+        applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), MOVE_SPEED_ID, stats.moveSpeed());
     }
 
     /** Forgets the cached bonus state of a player that left the server. */
@@ -410,7 +417,7 @@ public final class ForgeEffects {
         }
     }
 
-    /** Rabbit layer: +150% jump height (2.5x default height; velocity scales with sqrt(2.5)). */
+    /** Rabbit layer: jump height scales with its level (+30% ... +150%). */
     public static void onLivingJump(net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent event) {
         if (!(event.getEntity() instanceof Player player)) {
             return;
@@ -419,8 +426,12 @@ public final class ForgeEffects {
         if (!(weapon.getItem() instanceof SharpnessWeaponItem) || !Forge.hasRabbit(weapon)) {
             return;
         }
+        double jumpHeight = ForgeStats.of(weapon).jumpHeight();
+        if (jumpHeight <= 0.0D) {
+            return;
+        }
         Vec3 movement = player.getDeltaMovement();
-        double boosted = 0.42D * Math.sqrt(2.5D);
+        double boosted = 0.42D * Math.sqrt(1.0D + jumpHeight);
         if (movement.y < boosted) {
             player.setDeltaMovement(movement.x, boosted, movement.z);
         }

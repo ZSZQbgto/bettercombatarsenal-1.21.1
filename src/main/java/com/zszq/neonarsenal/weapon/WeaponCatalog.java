@@ -27,58 +27,65 @@ import net.minecraft.world.item.Tiers;
  */
 public final class WeaponCatalog {
 
+    /**
+     * Player base attack damage (1.0) plus the Iron tier attack damage bonus (2.0). The item tooltip
+     * shows {@code attackDamage + TOOLTIP_BASE}, so the catalogue below expresses the intended final
+     * base damage through {@link #baseDamage(float)}.
+     */
+    private static final float TOOLTIP_BASE = 1.0F + Tiers.IRON.getAttackDamageBonus();
+
     private static final List<WeaponDefinition> WEAPONS = List.of(
             WeaponDefinition.builder("sword")
                     .tier(Tiers.IRON)
-                    .attackDamage(3.3F)
+                    .attackDamage(baseDamage(5.0F))
                     .attackSpeed(-2.4F)
                     .betterCombatPreset(NeonArsenalPresets.SWORD)
                     .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("claymore")
                     .tier(Tiers.IRON)
-                    .attackDamage(12.0F)
+                    .attackDamage(baseDamage(11.5F))
                     .attackSpeed(-3.2F)
                     .betterCombatPreset(NeonArsenalPresets.CLAYMORE)
                     .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("doubleaxe")
                     .tier(Tiers.IRON)
-                    .attackDamage(17.0F)
+                    .attackDamage(baseDamage(15.0F))
                     .attackSpeed(-3.4F)
                     .betterCombatPreset(NeonArsenalPresets.DOUBLE_AXE)
                     .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("twinblade")
                     .tier(Tiers.IRON)
-                    .attackDamage(6.2F)
+                    .attackDamage(baseDamage(7.0F))
                     .attackSpeed(-2.6F)
                     .betterCombatPreset(NeonArsenalPresets.TWIN_BLADE)
                     .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("hengdao")
                     .tier(Tiers.IRON)
-                    .attackDamage(8.0F)
+                    .attackDamage(baseDamage(8.5F))
                     .attackSpeed(-2.9F)
                     .betterCombatPreset(NeonArsenalPresets.KATANA)
                     .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("rapier")
                     .tier(Tiers.IRON)
-                    .attackDamage(2.0F)
+                    .attackDamage(baseDamage(4.0F))
                     .attackSpeed(-1.8F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
                     .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("dagger")
                     .tier(Tiers.IRON)
-                    .attackDamage(1.0F)
+                    .attackDamage(baseDamage(3.0F))
                     .attackSpeed(-0.8F)
                     .betterCombatPreset(NeonArsenalPresets.DAGGER)
                     .build(),
             WeaponDefinition.builder("spear")
                     .tier(Tiers.IRON)
-                    .attackDamage(6.2F)
+                    .attackDamage(baseDamage(7.0F))
                     .attackSpeed(-2.8F)
                     .betterCombatPreset(NeonArsenalPresets.SPEAR)
                     .abilities(Ability.CHARGE_THRUST, Ability.BLOCK, Ability.JUMP_ATTACK)
@@ -97,6 +104,11 @@ public final class WeaponCatalog {
     }
 
     private WeaponCatalog() {
+    }
+
+    /** {@return the item attack-damage modifier that shows up as the given tooltip base damage}. */
+    private static float baseDamage(float tooltipDamage) {
+        return tooltipDamage - TOOLTIP_BASE;
     }
 
     /** {@return all weapons in display/registration order}. */

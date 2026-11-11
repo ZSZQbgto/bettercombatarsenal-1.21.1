@@ -1,6 +1,7 @@
 package com.zszq.neonarsenal.item;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -9,6 +10,7 @@ import com.zszq.neonarsenal.weapon.WeaponDefinition.Ability;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -171,11 +173,12 @@ public class SharpnessWeaponItem extends Item {
         if (!shift) {
             // Default view: the combined percentages always include the enchantment damage/attack
             // speed values; the enchantments themselves are listed by name only.
-            double[] forge = heldBonuses(Forge.distinctLayers(stack));
-            addBonusLine(tooltip, "bonus.damage", forge[0] + enchantDamage);
-            addBonusLine(tooltip, "bonus.attack_speed", forge[1] + enchantAttackSpeed);
+            ForgeStats.Stats forge = ForgeStats.of(stack);
+            addBonusLine(tooltip, "bonus.damage", forge.damage() + enchantDamage);
+            addBonusLine(tooltip, "bonus.attack_speed", forge.attackSpeed() + enchantAttackSpeed);
             if (!layers.isEmpty()) {
-                addBonusLine(tooltip, "bonus.move_speed", forge[2]);
+                addBonusLine(tooltip, "bonus.move_speed", forge.moveSpeed());
+                addBonusLine(tooltip, "bonus.crit_chance", forge.critChance());
             }
             if (!enchantNames.isEmpty()) {
                 tooltip.add(Component.translatable(PREFIX + "section_enchant")
@@ -206,13 +209,14 @@ public class SharpnessWeaponItem extends Item {
         }
 
         tooltip.add(Component.translatable(PREFIX + "section_stats").withStyle(ChatFormatting.GOLD));
-        double[] bonus = heldBonuses(Forge.distinctLayers(stack));
-        addBonusLine(tooltip, "bonus.damage", bonus[0] + enchantDamage);
-        addBonusLine(tooltip, "bonus.attack_speed", bonus[1] + enchantAttackSpeed);
-        addBonusLine(tooltip, "bonus.move_speed", bonus[2]);
+        ForgeStats.Stats bonus = ForgeStats.of(stack);
+        addBonusLine(tooltip, "bonus.damage", bonus.damage() + enchantDamage);
+        addBonusLine(tooltip, "bonus.attack_speed", bonus.attackSpeed() + enchantAttackSpeed);
+        addBonusLine(tooltip, "bonus.move_speed", bonus.moveSpeed());
+        addBonusLine(tooltip, "bonus.crit_chance", bonus.critChance());
         if (Forge.hasRabbit(stack)) {
-            tooltip.add(Component.translatable(PREFIX + "jump_height").withStyle(ChatFormatting.GRAY));
-            tooltip.add(Component.translatable(PREFIX + "jump_slam").withStyle(ChatFormatting.GRAY));
+            addBonusLine(tooltip, "jump_height", bonus.jumpHeight());
+            addBonusLine(tooltip, "jump_slam", bonus.jumpSlam());
         }
         long multiplier = Math.round(Sharpness.damageMultiplier(sharpness) * 100.0D);
         tooltip.add(Component.translatable(PREFIX + "sharpness_multiplier", multiplier)
@@ -228,10 +232,14 @@ public class SharpnessWeaponItem extends Item {
                         .withStyle(style -> style.withColor(Forge.colorOf(layer))));
             }
             tooltip.add(name);
-            tooltip.add(Component.translatable(heldKey(layer)).withStyle(ChatFormatting.GRAY));
-            if (level >= 2) {
-                // Second copy of the same material: its on-hit effect is unlocked.
+            tooltip.add(layerBonus(layer, level));
+            if (level >= Forge.HIT_EFFECT_LEVEL) {
+                // Three copies of the same material: its on-hit effect is unlocked.
                 tooltip.add(Component.translatable(effectKey(layer)).withStyle(ChatFormatting.GRAY));
+                if (level >= Forge.MAX_LEVEL) {
+                    tooltip.add(Component.translatable(PREFIX + "forge.cooldown_halved")
+                            .withStyle(ChatFormatting.GRAY));
+                }
             } else {
                 tooltip.add(Component.translatable(PREFIX + "forge.effect_locked")
                         .withStyle(ChatFormatting.DARK_GRAY));
@@ -239,9 +247,45 @@ public class SharpnessWeaponItem extends Item {
         }
     }
 
-    /** {@return a small roman number for the forged level (only II is used today)}. */
+    /** Builds the "Layer Bonus: ..." line for one material, using its current level values. */
+    private static Component layerBonus(String layer, int level) {
+        ForgeStats.Stats bonus = ForgeStats.forLayer(layer, level);
+        List<Component> parts = new ArrayList<>();
+        addBonusPart(parts, bonus.attackSpeed(), "bonus.attack_speed");
+        addBonusPart(parts, bonus.damage(), "bonus.damage");
+        addBonusPart(parts, bonus.moveSpeed(), "bonus.move_speed");
+        addBonusPart(parts, bonus.jumpHeight(), "jump_height");
+        addBonusPart(parts, bonus.jumpSlam(), "jump_slam");
+        addBonusPart(parts, bonus.critChance(), "bonus.crit_chance");
+        MutableComponent line = Component.translatable(PREFIX + "forge.bonus").withStyle(ChatFormatting.GRAY);
+        line = line.copy().append(Component.literal(": ").withStyle(ChatFormatting.GRAY));
+        for (int i = 0; i < parts.size(); i++) {
+            if (i > 0) {
+                line.append(Component.translatable(PREFIX + "forge.bonus.separator")
+                        .withStyle(ChatFormatting.GRAY));
+            }
+            line.append(parts.get(i));
+        }
+        return line;
+    }
+
+    private static void addBonusPart(List<Component> parts, double value, String labelKey) {
+        if (Math.abs(value) < 1.0E-4D) {
+            return;
+        }
+        long percent = Math.round(value * 100.0D);
+        String amount = (percent >= 0 ? "+" : "") + percent + "%";
+        ChatFormatting color = percent >= 0 ? ChatFormatting.GREEN : ChatFormatting.RED;
+        parts.add(Component.translatable(PREFIX + "bonus.format",
+                Component.translatable(PREFIX + labelKey).withStyle(ChatFormatting.GRAY),
+                Component.literal(amount).withStyle(color)));
+    }
+
+    private static final String[] ROMAN = {"I", "II", "III", "IV", "V"};
+
+    /** {@return the roman numeral of a forged level (1-5)}. */
     private static String roman(int value) {
-        return value >= 2 ? "II" : "I";
+        return value >= 1 && value <= ROMAN.length ? ROMAN[value - 1] : Integer.toString(value);
     }
 
     /** {@return the "layer + layer + ..." component used by the compact tooltip line}. */
@@ -283,45 +327,6 @@ public class SharpnessWeaponItem extends Item {
             case Forge.CREEPER -> PREFIX + "layer.creeper";
             case Forge.RABBIT -> PREFIX + "layer.rabbit";
             case Forge.ECHO -> PREFIX + "layer.echo";
-            default -> PREFIX + "layer.unknown";
-        };
-    }
-
-    /** Held bonuses of all layers: {damage, attack speed, movement speed}. */
-    private static double[] heldBonuses(List<String> layers) {
-        double damage = 0.0D;
-        double attackSpeed = 0.0D;
-        double moveSpeed = 0.0D;
-        for (String layer : layers) {
-            switch (layer) {
-                case Forge.CHORUS -> {
-                    damage += 0.10D;
-                    moveSpeed += 0.15D;
-                }
-                case Forge.CREEPER -> {
-                    damage += 0.05D;
-                    attackSpeed += 0.15D;
-                }
-                case Forge.RABBIT -> attackSpeed += 0.05D;
-                case Forge.ECHO -> {
-                    attackSpeed -= 0.50D;
-                    damage += 1.00D;
-                }
-                default -> {
-                    // Unknown layer.
-                }
-            }
-        }
-        return new double[] {damage, attackSpeed, moveSpeed};
-    }
-
-    /** Tooltip key of the carried ("while held") bonus of a forge layer. */
-    private static String heldKey(String layer) {
-        return switch (layer) {
-            case Forge.CHORUS -> PREFIX + "forge.chorus.held";
-            case Forge.CREEPER -> PREFIX + "forge.creeper.held";
-            case Forge.RABBIT -> PREFIX + "forge.rabbit.held";
-            case Forge.ECHO -> PREFIX + "forge.echo.held";
             default -> PREFIX + "layer.unknown";
         };
     }
