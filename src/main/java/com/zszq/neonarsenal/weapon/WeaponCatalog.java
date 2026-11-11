@@ -37,7 +37,7 @@ public final class WeaponCatalog {
     private static final List<WeaponDefinition> WEAPONS = List.of(
             WeaponDefinition.builder("sword")
                     .tier(Tiers.IRON)
-                    .attackDamage(baseDamage(5.0F))
+                    .attackDamage(baseDamage(5.3F))
                     .attackSpeed(-2.4F)
                     .betterCombatPreset(NeonArsenalPresets.SWORD)
                     .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
@@ -58,7 +58,7 @@ public final class WeaponCatalog {
                     .build(),
             WeaponDefinition.builder("twinblade")
                     .tier(Tiers.IRON)
-                    .attackDamage(baseDamage(7.0F))
+                    .attackDamage(baseDamage(6.6F))
                     .attackSpeed(-2.6F)
                     .betterCombatPreset(NeonArsenalPresets.TWIN_BLADE)
                     .abilities(Ability.FALL_SLASH, Ability.ELYTRA_SLASH, Ability.BLOCK, Ability.JUMP_ATTACK)
@@ -72,20 +72,20 @@ public final class WeaponCatalog {
                     .build(),
             WeaponDefinition.builder("rapier")
                     .tier(Tiers.IRON)
-                    .attackDamage(baseDamage(4.0F))
+                    .attackDamage(baseDamage(3.7F))
                     .attackSpeed(-1.8F)
                     .betterCombatPreset(NeonArsenalPresets.RAPIER)
                     .abilities(Ability.BLOCK, Ability.JUMP_ATTACK)
                     .build(),
             WeaponDefinition.builder("dagger")
                     .tier(Tiers.IRON)
-                    .attackDamage(baseDamage(3.0F))
+                    .attackDamage(baseDamage(2.9F))
                     .attackSpeed(-0.8F)
                     .betterCombatPreset(NeonArsenalPresets.DAGGER)
                     .build(),
             WeaponDefinition.builder("spear")
                     .tier(Tiers.IRON)
-                    .attackDamage(baseDamage(7.0F))
+                    .attackDamage(baseDamage(7.5F))
                     .attackSpeed(-2.8F)
                     .betterCombatPreset(NeonArsenalPresets.SPEAR)
                     .abilities(Ability.CHARGE_THRUST, Ability.BLOCK, Ability.JUMP_ATTACK)

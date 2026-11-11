@@ -17,12 +17,13 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 /**
  * Applies the sharpness index to damage, consumption and vanilla-style anvil repair.
  *
- * <p>Damage is scaled by the weapon sharpness. Each hit costs one point (at most once per player
- * per tick, so one swing hitting several targets still costs one point) and each broken block costs
- * one point; Unbreaking reduces the chance of that loss like vanilla durability (level L consumes
- * with a chance of 1/(L+1)). In an anvil, a weapon plus honeycombs (one honeycomb per 1000
- * sharpness) restores the weapon like an iron tool repaired with iron ingots; unused honeycombs stay
- * in the anvil.</p>
+ * <p>Damage is scaled by the weapon's own sharpness (during dual wielding each hand uses and consumes
+ * the weapon that actually attacked; jump slashes use the main-hand weapon). Each hit costs one
+ * point (at most once per player per tick, so one swing hitting several targets still costs one
+ * point) and each broken block costs one point; Unbreaking reduces the chance of that loss like
+ * vanilla durability (level L consumes with a chance of 1/(L+1)). In an anvil, a weapon plus
+ * honeycombs (one honeycomb per 1000 sharpness) restores the weapon like an iron tool repaired with
+ * iron ingots; unused honeycombs stay in the anvil.</p>
  */
 public final class SharpnessEvents {
 
@@ -40,12 +41,16 @@ public final class SharpnessEvents {
         if (!(event.getSource().getDirectEntity() instanceof Player player) || player.level().isClientSide()) {
             return;
         }
-        ItemStack weapon = player.getMainHandItem();
-        if (!(weapon.getItem() instanceof SharpnessWeaponItem)) {
+        boolean offHand = AttackHandTracker.isOffHandAttack(player);
+        boolean jumpSlam = JumpAttackHandler.isRecentJumpSlam(player);
+        if (jumpSlam && offHand) {
+            // Jump slashes always use the main-hand weapon. Better Combat only performs a jump slash
+            // with the off hand when the main hand is not an arsenal weapon, so nothing is scaled or
+            // consumed for this off-hand hit.
             return;
         }
-        if (AttackHandTracker.isOffHandAttack(player)) {
-            // Dual wielding: off-hand hits neither scale nor consume the main-hand sharpness.
+        ItemStack weapon = AttackHandTracker.attackingWeapon(player);
+        if (!(weapon.getItem() instanceof SharpnessWeaponItem)) {
             return;
         }
         event.setAmount(event.getAmount() * Sharpness.damageMultiplier(weapon));

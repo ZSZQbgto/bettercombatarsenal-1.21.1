@@ -28,6 +28,7 @@
   "tooltip.bettercombat_neonarsenal.jump_height": "跳跃高度",
   "tooltip.bettercombat_neonarsenal.jump_slam": "跃斩伤害",
   "tooltip.bettercombat_neonarsenal.sharpness_multiplier": "锐度伤害系数: %s%%",
+  "tooltip.bettercombat_neonarsenal.type_multiplier": "锻刃类型伤害倍率: ×%s",
   "tooltip.bettercombat_neonarsenal.layer.chorus": "紫颂果",
   "tooltip.bettercombat_neonarsenal.layer.creeper": "苦力怕头颅",
   "tooltip.bettercombat_neonarsenal.layer.rabbit": "兔子脚",

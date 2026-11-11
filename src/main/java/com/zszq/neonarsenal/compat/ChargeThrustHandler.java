@@ -231,6 +231,9 @@ public final class ChargeThrustHandler {
         }
         ItemStack weapon = player.getMainHandItem();
         double baseDamage = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        // The charge is a main-hand skill: drop any recorded Better Combat attack hand so the
+        // forge/sharpness damage calculations use the main-hand weapon.
+        AttackHandTracker.clear(player.getUUID());
         Vec3 attackerVelocity = charge.velocity();
         for (LivingEntity target : targets) {
             UUID id = target.getUUID();

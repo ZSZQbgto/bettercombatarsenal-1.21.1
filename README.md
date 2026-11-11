@@ -60,9 +60,9 @@
 | 紫颂果 | 伤害 +10% → +115%、移速 +2% → +10% | 20 格内敌人拉进攻击范围，僵直 4 秒 | 10 秒（满 5 层 5 秒） |
 | 苦力怕头颅 | 攻速 +5% → +40%、伤害 +5% → +40% | 无敌苦力怕（免疫伤害与击退）像原版躲避猫一样用 `AvoidEntityGoal` **真实寻路**远离玩家（4 秒，半径 24 格、1.2 冲刺速度），并强吸敌对生物，随后原地白色闪烁 1.4 秒并爆炸（不破坏地形、仅伤敌对，dummmmmmy 人偶除外） | 30 秒（满 5 层 15 秒） |
 | 兔子脚 | 攻速 +5% → +40%、伤害 +4% → +35%、跳跃高度 +30% → +150%、跃斩增伤 +20% → +100% | 4 只无敌雷霆大兔子（免疫伤害与击退），每 0.5 秒咬 3 个目标各 4 伤害，10 秒后消失 | 30 秒（满 5 层 15 秒） |
-| 回响碎片 | 攻速 -50%（固定）、伤害 +60% → +300% | 8 格内敌人互相攻击 8 秒 | 30 秒（满 5 层 15 秒） |
+| 回响碎片 | 攻速 -20%（固定）、伤害 +30% → +150% | 8 格内敌人互相攻击 8 秒 | 30 秒（满 5 层 15 秒） |
 
-**成长规则**：材料层数（1–5 阶）按各自成长表成长，完整数值见 `docs/FORGING_SPEC.md` §4.5；每层额外 **+2% 暴击率**，暴击造成 **×1.5** 伤害（原版暴击的粒子/音效）。
+**成长规则**：材料层数（1–5 阶）按各自成长表成长，完整数值见 `docs/FORGING_SPEC.md` §4.5；每层额外 **+2% 暴击率**，暴击造成 **×1.5** 伤害（原版暴击的粒子/音效）。**类型倍率**：武器上不同锻刃材料的种类数（0–4 种）会乘算最终总伤害：0 种 ×1、1 种 ×1.05、2 种 ×1.15、3 种 ×1.3、4 种 ×1.5（在最终伤害结算时乘算，与锐度、暴击等乘法叠加；按实际攻击手武器结算，跳跃斩击按主手）。
 
 **解锁规则**：每种材料锻入 1–2 层只生效「锻层加成」；**同种材料锻入第 3 层**才开启该材料的「命中效果」；同种材料满 5 层时该效果冷却减半。每种材料最多 5 层，武器总共最多 6 层，可混搭不同材料。Shift 详情在未达 3 层时显示「命中效果：同种材料锻入 3 层后开启」。
 
@@ -89,6 +89,7 @@
 - 触发时播放阔剑第三段下劈动画、使用武器自身音效、击退 I、重置连招。
 - 跳劈后攻击冷却的前半段禁止起跳；落地后清空跳劈窗口。
 - 创造飞行时攻击使用平地出招，不触发跳劈。
+- 跳跃斩击的伤害加成按主手武器计算。
 
 ### 6. 下落斩击
 
@@ -132,14 +133,14 @@
 
 | 武器 | ID | 攻速 | 伤害 | DPS | 跳劈 | 格挡 | 下落斩击 | 鞘翅斩击 | 定位 |
 |---|---|---|---|---|---|---|---|---|---|
-| 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 5.0 | 8.0 | ✓ | ✓ | — | — | 单手，最稳 |
+| 长剑 | `bettercombat_neonarsenal:sword` | 1.6 | 5.3 | 8.48 | ✓ | ✓ | — | — | 单手，最稳 |
 | 阔剑 | `bettercombat_neonarsenal:claymore` | 0.8 | 11.5 | 9.2 | ✓ | ✓ | ✓ | ✓ | 双手，+0.35 距离 |
-| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 7.0 | 9.8 | ✓ | ✓ | ✓ | ✓ | 双手连段 |
+| 双刃剑 | `bettercombat_neonarsenal:twinblade` | 1.4 | 6.6 | 9.24 | ✓ | ✓ | ✓ | ✓ | 双手连段 |
 | 双刃斧 | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 15.0 | 9.0 | ✓ | ✓ | ✓ | ✓ | 双手旋转斩 |
 | 横刀 | `bettercombat_neonarsenal:hengdao` | 1.1 | 8.5 | 9.4 | ✓ | ✓ | ✓ | ✓ | 双手拔刀斩 |
-| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 4.0 | 10.0 | ✓ | ✓ | — | — | 单手快刺 |
-| 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 3.0 | 9.6 | — | — | — | — | 单手短刃，纯输出 |
-| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 7.0 | 8.4 | ✓ | ✓ | — | — | 双手，+1 距离，**冲锋前刺** |
+| 刺剑 | `bettercombat_neonarsenal:rapier` | 2.5 | 3.7 | 9.25 | ✓ | ✓ | — | — | 单手快刺 |
+| 匕首 | `bettercombat_neonarsenal:dagger` | 3.2 | 2.9 | 9.28 | — | — | — | — | 单手短刃，纯输出 |
+| 长枪 | `bettercombat_neonarsenal:spear` | 1.2 | 7.5 | 9.0 | ✓ | ✓ | — | — | 双手，+1 距离，**冲锋前刺** |
 
 （DPS = 基础伤害 × 攻速。）
 
@@ -152,7 +153,7 @@
   - 长枪不适用三叉戟附魔（忠诚、激流、引雷、穿刺）；**致密/破甲**为原版重锤专属，不能自然获得。`/enchant` 命令可强制附上，且仍按原版排斥（致密/破甲 与 锋利/亡灵杀手/节肢杀手/穿刺 互斥）。
 - **附魔视觉效果**：未锻入**发光墨囊**时无效果；锻入后刀刃发光不再是单一颜色，而是**中等速度的流光**——颜色沿刀刃在武器当前颜色环（染料/锻刃混色）附近以**较窄的色相变化范围**（±12°、第二谐波权重 0.25）流动；未染色时表现为明暗流光。
 - **不显示原版附魔光效**：附魔武器不会出现原版附魔闪烁，只保留本模组自己的刀刃发光/流光。
-- **Tooltip**：默认显示**综合百分比**：伤害与攻速会把附魔提供的伤害/攻速数值**叠加**到锻刃百分比上（锋利/亡灵杀手/节肢杀手/火焰附加折算为相对武器基础攻击伤害的百分比；附魔数据里的攻速修饰符也计入攻速百分比），附魔部分**只列附魔名称**；按住 **Shift** 查看附魔名称、综合性能与锻刃说明。
+- **Tooltip**：默认显示**综合百分比**：伤害与攻速会把附魔提供的伤害/攻速数值**叠加**到锻刃百分比上（锋利/亡灵杀手/节肢杀手/火焰附加折算为相对武器基础攻击伤害的百分比；附魔数据里的攻速修饰符也计入攻速百分比），附魔部分**只列附魔名称**；按住 **Shift** 查看附魔名称、综合性能（含锻刃类型伤害倍率）与锻刃说明。
 - **经验修补（Mending）**：附在本模组武器上时不再修耐久（武器无耐久），改为**每 1 点经验恢复 20 点锋利度**（消耗对应经验，优先主手、其次副手；锋利度已满时经验正常获得，多余经验仍会正常进账/修其它带经验修补的装备）。
 - **耐久（Unbreaking）**：武器无耐久，附魔改为降低**锋利度损耗率**：沿用原版耐久公式，每级 L 使每次命中/挖掘消耗 1 点锋利度的概率变为 1/(L+1)（I 50%、II 33.3%、III 25%），即期望损耗率降为 1/(L+1)。
 
@@ -170,7 +171,7 @@
 
 - **持刀动作**：单持**长剑 / 阔剑 / 双刃剑 / 双刃斧 / 横刀 / 刺剑 / 长枪**时，主手使用设计好的持刀动作（`animations/weapon_holding_action_from_behind.json`，含手臂与肘弯），静止与移动都保持该设计动作；武器位置与朝向保持原版渲染不变；移动时只叠加微量前后摆动：行走中轴后 5°、扇面 4°，疾跑中轴后 10°、扇面 8°，静止时无摆动。与攻击招式之间平滑过渡（出招时淡出、收招后淡入），**双持时副手保持原有动作不变**（匕首保持原持刀动作）。
 - **冷却跟武器走**：存在物品上按游戏时间计算，丢弃、换手、重进都不刷新。
-- **双持**：锻刃与锋利度只由主手攻击触发；副手砍人不触发、不消耗；两手外观各自独立。
+- **双持**：主手攻击按主手武器、副手攻击按副手武器分别结算锻刃伤害百分比、类型倍率、暴击率与锐度（副手攻击消耗副手武器自己的锐度）；攻速/移速等持有效果仍取主手武器；锻刃命中效果（紫颂/苦力怕/兔子/回响）仍只由主手攻击触发；跳跃斩击的伤害加成始终按主手武器计算。两手外观各自独立。
 - **砂轮**：一次清除锻刃、染料、开关、冷却、稀有度，保留锋利度。
 - **Tooltip**：平时显示刀刃锐度、颜色、附魔数值加成与锻刃百分比加成；按住 Shift 看附魔明细、综合性能与每层说明。
 - **配置**：模组列表滑条——粒子密度 0–3、刀刃发光强度 0–1。
@@ -244,9 +245,9 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**; **each material can 
 | Chorus Fruit | +10% -> +115% damage, +2% -> +10% move speed | Pull mobs within 20 blocks into range, stun 4 s | 10 s (5 s at 5 layers) |
 | Creeper Head | +5% -> +40% attack speed, +5% -> +40% damage | An invulnerable creeper flees the player with **real pathfinding** using vanilla creeper-vs-cat `AvoidEntityGoal` (4 s, radius 24, sprint 1.2), pulls mobs, then flashes in place for 1.4 s and explodes | 30 s (15 s at 5 layers) |
 | Rabbit's Foot | +5% -> +40% attack speed, +4% -> +35% damage, +30% -> +150% jump height, +20% -> +100% jump-slam damage | Four invulnerable thunder rabbits bite 3 targets for 4 damage every 0.5 s, vanish after 10 s | 30 s (15 s at 5 layers) |
-| Echo Shard | -50% attack speed (fixed), +60% -> +300% damage | Mobs within 8 blocks fight each other for 8 s | 30 s (15 s at 5 layers) |
+| Echo Shard | -20% attack speed (fixed), +30% -> +150% damage | Mobs within 8 blocks fight each other for 8 s | 30 s (15 s at 5 layers) |
 
-**Growth rule**: a material's level (1-5 = number of copies) follows the unified exponential table in `docs/FORGING_SPEC.md` section 4.5. Every layer also grants **+2% crit chance** for **x1.5** critical damage (vanilla crit particles/sound).
+**Growth rule**: a material's level (1-5 = number of copies) follows the unified exponential table in `docs/FORGING_SPEC.md` section 4.5. Every layer also grants **+2% crit chance** for **x1.5** critical damage (vanilla crit particles/sound). **Type multiplier**: the number of distinct forged material types on a weapon (0-4) multiplies the final total damage: 0 types x1, 1 type x1.05, 2 types x1.15, 3 types x1.3, 4 types x1.5 (applied at the final damage step, stacking multiplicatively with sharpness, crits and so on; calculated from the weapon of the attacking hand, jump slashes use the main hand).
 
 **Unlock rule**: one or two copies of a material only grant its layer bonus; **the 3rd copy** unlocks its "on hit" effect, and the full 5 copies halve that effect's cooldown. Each material can be forged up to five times, up to 6 layers per weapon, different materials can be mixed. Below 3 copies the Shift details show "On-hit effect: forge 3 copies of this material to unlock".
 
@@ -273,6 +274,7 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**; **each material can 
 - On trigger: claymore slam animation, the weapon's own sound, Knockback I, combo reset.
 - The first half of the attack cooldown blocks jumping; the jump window is cleared on landing.
 - Creative-flight attacks use the normal ground attack instead of the jump slam.
+- Jump-slash damage bonuses are calculated from the main-hand weapon.
 
 ### 6. Falling slash
 
@@ -320,7 +322,7 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**; **each material can 
   - The spear accepts no trident enchantments (Loyalty, Riptide, Channeling, Impaling); **Density/Breach** are mace-only and cannot be obtained naturally. `/enchant` can force them and the vanilla exclusive sets are still enforced (Density/Breach vs Sharpness/Smite/Bane/Impaling).
 - **Visual effect**: no glow ink sac → no effect; with it the blade glow is no longer a single colour but a **medium-speed flowing light** whose colours travel along the blade near the weapon's current colour-ring colour (dye/forge mix) inside a **narrower hue range** (±12°, second harmonic weight 0.25); an uncoloured blade shows a brightness flow.
 - **No vanilla enchantment glint**: enchanted arsenal weapons never show the vanilla foil effect; only the mod's own blade glow/flow is used.
-- **Tooltip**: the default view shows the **combined percentages**: damage and attack speed **add** the enchantment-provided damage/attack-speed values to the forge percentages (Sharpness/Smite/Bane of Arthropods/Fire Aspect as percentages of the weapon's base attack damage; attack-speed modifiers in the enchantment data are also added to the attack speed percentage), and the enchantments themselves are listed by **name only**. Hold **Shift** for the enchantment names, total stats and forge descriptions.
+- **Tooltip**: the default view shows the **combined percentages**: damage and attack speed **add** the enchantment-provided damage/attack-speed values to the forge percentages (Sharpness/Smite/Bane of Arthropods/Fire Aspect as percentages of the weapon's base attack damage; attack-speed modifiers in the enchantment data are also added to the attack speed percentage), and the enchantments themselves are listed by **name only**. Hold **Shift** for the enchantment names, total stats (including the forged-material type damage multiplier) and forge descriptions.
 - **Mending** on an arsenal weapon restores **sharpness** instead of durability (the weapons are unbreakable): **1 experience point restores 20 sharpness** (that experience is consumed; the main hand is repaired first, then the off hand). When the held weapon is already full, experience is gained normally, and leftover experience still repairs other Mending gear.
 - **Unbreaking** on an arsenal weapon reduces the **sharpness loss rate** instead of durability, with the vanilla durability formula: with level L each hit/broken block consumes one sharpness point with a probability of 1/(L+1) (I 50%, II 33.3%, III 25%), i.e. the expected loss rate becomes 1/(L+1).
 
@@ -328,16 +330,16 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**; **each material can 
 
 | Weapon | ID | Speed | Damage | DPS | Jump slam | Block | Falling slash | Elytra slash | Role |
 |---|---|---|---|---|---|---|---|---|---|
-| Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 5.0 | 8.0 | ✓ | ✓ | — | — | One-handed, steady |
+| Longsword | `bettercombat_neonarsenal:sword` | 1.6 | 5.3 | 8.48 | ✓ | ✓ | — | — | One-handed, steady |
 | Broadsword | `bettercombat_neonarsenal:claymore` | 0.8 | 11.5 | 9.2 | ✓ | ✓ | ✓ | ✓ | Two-handed, +0.35 reach |
-| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 7.0 | 9.8 | ✓ | ✓ | ✓ | ✓ | Two-handed combo |
+| Double-Edged Sword | `bettercombat_neonarsenal:twinblade` | 1.4 | 6.6 | 9.24 | ✓ | ✓ | ✓ | ✓ | Two-handed combo |
 | Double-Bladed Axe | `bettercombat_neonarsenal:doubleaxe` | 0.6 | 15.0 | 9.0 | ✓ | ✓ | ✓ | ✓ | Two-handed spin |
 | Hengdao | `bettercombat_neonarsenal:hengdao` | 1.1 | 8.5 | 9.4 | ✓ | ✓ | ✓ | ✓ | Two-handed draw slashes |
-| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 4.0 | 10.0 | ✓ | ✓ | — | — | One-handed fast thrusts |
-| Dagger | `bettercombat_neonarsenal:dagger` | 3.2 | 3.0 | 9.6 | — | — | — | — | One-handed short blade, pure damage |
-| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 7.0 | 8.4 | ✓ | ✓ | — | — | Two-handed, +1 reach, **charge thrust** |
+| Rapier | `bettercombat_neonarsenal:rapier` | 2.5 | 3.7 | 9.25 | ✓ | ✓ | — | — | One-handed fast thrusts |
+| Dagger | `bettercombat_neonarsenal:dagger` | 3.2 | 2.9 | 9.28 | — | — | — | — | One-handed short blade, pure damage |
+| Spear | `bettercombat_neonarsenal:spear` | 1.2 | 7.5 | 9.0 | ✓ | ✓ | — | — | Two-handed, +1 reach, **charge thrust** |
 
-(Base damage is unified to **3/4** of the previous value and rounded **up to the next 0.5**; DPS = base damage x attack speed.)
+(Weapon base damage follows `WeaponCatalog`; see the weapon table above. DPS = base damage x attack speed.)
 
 ### 9. Charge thrust (mounted spear)
 
@@ -353,7 +355,7 @@ Anvil weapon + material: 8 levels, 1:1, up to **6 layers**; **each material can 
 
 - **Holding animation**: when single-wielding the **Longsword / Broadsword / Double-Edged Sword / Double-Bladed Axe / Hengdao / Rapier / Spear**, the main hand uses the authored holding action (`animations/weapon_holding_action_from_behind.json`, arm + elbow bend) for both idle and moving, and the weapon keeps the vanilla placement/orientation; moving only adds a tiny fore/back swing: walking 5° backward centre with a 4° fan, sprinting 10° backward centre with an 8° fan, standing still no swing. It cross-fades smoothly with attack animations (fades out while swinging, back in afterwards), and **the offhand keeps its original animation when dual wielding** (the dagger keeps its previous holding pose).
 - **Cooldowns follow the weapon**: stored on the item as game time; dropping, swapping or rejoining never resets them.
-- **Dual wielding**: forge and sharpness effects trigger only from the main hand; off-hand hits trigger nothing; each hand keeps its own appearance.
+- **Dual wielding**: main-hand attacks settle with the main-hand weapon and off-hand attacks settle with the off-hand weapon, each using its own forge damage percentage, type multiplier, crit chance and sharpness multiplier (off-hand hits consume the off-hand weapon's own sharpness); held bonuses such as attack speed / move speed still come from the main-hand weapon; forge on-hit effects (chorus / creeper / rabbit / echo) still trigger only from main-hand hits; jump-slash damage bonuses always use the main-hand weapon. Each hand keeps its own appearance.
 - **Grindstone**: clears layers, dye, switches, cooldowns and rarity in one operation; sharpness stays.
 - **Tooltip**: shows blade sharpness, colour, numeric enchantment/forge bonuses by default; hold Shift for enchantment details, totals and per-layer text.
 - **Config**: mod-list sliders — particle density 0–3, blade glow intensity 0–1.

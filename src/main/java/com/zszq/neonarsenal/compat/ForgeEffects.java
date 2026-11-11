@@ -47,8 +47,11 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * <p>Unlock rule: forging one or two copies of a material only grants that material's carried
  * ("while held") bonus; the material's on-hit effect unlocks at three copies and the cooldown is
  * halved at the full five copies (see {@link Forge#hitEffectActive}, {@link Forge#cooldownTicks}).
- * Held bonuses scale per material level through {@link ForgeStats}; every forged layer also grants
- * +2% critical chance.</p>
+ * Attack speed and movement speed are held bonuses of the main-hand weapon (applied as player
+ * attribute modifiers); every forged layer also grants +2% critical chance. The forge damage
+ * percentage, the forged-material type multiplier, the critical chance and the sharpness multiplier
+ * are applied at hit time with the weapon of the hand that actually attacked, so main- and off-hand
+ * attacks are calculated separately. A jump slash always uses the main-hand weapon's bonuses.</p>
  *
  * <ul>
  *   <li><b>Chorus fruit</b>: pull hostiles (20 blocks, line of sight) + 4 s stun; 10 s weapon cooldown
@@ -59,7 +62,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  *   <li><b>Rabbit foot</b>: held jump height / jump-slam damage scale with its level; hits summon
  *       four 2-block-tall invulnerable rabbits that attack hostiles for 4 damage each; 30 s weapon
  *       cooldown (15 s at five layers).</li>
- *   <li><b>Echo shard</b>: fixed -50% attack speed, damage scales with level; hostiles fight each
+ *   <li><b>Echo shard</b>: fixed -20% attack speed, damage scales with level; hostiles fight each
  *       other for 8 s; 30 s weapon cooldown (15 s at five layers).</li>
  * </ul>
  */
@@ -104,8 +107,6 @@ public final class ForgeEffects {
             ResourceLocation.fromNamespaceAndPath(NeonArsenal.MODID, "forge_attack_speed");
     private static final ResourceLocation MOVE_SPEED_ID =
             ResourceLocation.fromNamespaceAndPath(NeonArsenal.MODID, "forge_move_speed");
-    private static final ResourceLocation DAMAGE_ID =
-            ResourceLocation.fromNamespaceAndPath(NeonArsenal.MODID, "forge_damage");
 
     private static final Map<LivingEntity, Long> STUNNED_UNTIL = new WeakHashMap<>();
     private static final Map<Rabbit, RabbitMinion> RABBIT_MINIONS = new WeakHashMap<>();
@@ -149,23 +150,52 @@ public final class ForgeEffects {
         if (!(event.getSource().getDirectEntity() instanceof Player player) || player.level().isClientSide()) {
             return;
         }
-        ItemStack weapon = player.getMainHandItem();
+        boolean offHand = AttackHandTracker.isOffHandAttack(player);
+        boolean jumpSlam = JumpAttackHandler.isRecentJumpSlam(player);
+        if (jumpSlam && offHand) {
+            // Jump slashes always settle with the main-hand weapon. Better Combat only performs a
+            // jump slash with the off hand when the main hand is not an arsenal weapon, so this
+            // off-hand hit has no forge/sharpness bonus to apply.
+            return;
+        }
+        // Dual wielding: each hand uses its own weapon's values. Better Combat swaps the hand stacks
+        // while it performs an off-hand attack, so the off-hand slot holds the attacking weapon; on
+        // every other hit the main hand does.
+        ItemStack weapon = AttackHandTracker.attackingWeapon(player);
         if (!(weapon.getItem() instanceof SharpnessWeaponItem)) {
             return;
         }
-        if (AttackHandTracker.isOffHandAttack(player)) {
-            // Dual wielding: off-hand attacks never trigger the main-hand weapon's forge effects.
-            return;
+        ForgeStats.Stats forge = ForgeStats.of(weapon);
+        // The forge damage bonus is applied at hit time instead of as a permanent player
+        // ATTACK_DAMAGE modifier, so main- and off-hand hits each use their own weapon's value.
+        if (forge.damage() != 0.0D) {
+            event.setAmount(event.getAmount() * (float) (1.0D + forge.damage()));
         }
-        if (Forge.hasRabbit(weapon) && JumpAttackHandler.isRecentJumpSlam(player)) {
+        // Mixing different forge materials multiplies the total damage of the hit (x1 ... x1.5, see
+        // ForgeStats#typeDamageMultiplier). All other damage steps are multiplicative too, so the
+        // order does not matter; applying it here covers normal, jump-slam and skill damage alike.
+        double typeDamage = ForgeStats.typeDamageMultiplier(weapon);
+        if (typeDamage != 1.0D) {
+            event.setAmount(event.getAmount() * (float) typeDamage);
+        }
+        if (jumpSlam && Forge.hasRabbit(weapon)) {
             // Rabbit layer: jump-slam damage scales with the rabbit level (+20% ... +100%).
-            event.setAmount(event.getAmount()
-                    * (float) (1.0D + ForgeStats.of(weapon).jumpSlam()));
+            event.setAmount(event.getAmount() * (float) (1.0D + forge.jumpSlam()));
         }
+        if (!offHand) {
+            // Off-hand hits keep the original rule: only main-hand hits trigger the forge effects
+            // (and consume their cooldowns).
+            triggerOnHitEffects(player, weapon, event.getEntity());
+        }
+        applyCrit(player, weapon, event);
+    }
+
+    /** Runs the on-hit forge effects of the main-hand weapon (unlocked at three copies each). */
+    private static void triggerOnHitEffects(Player player, ItemStack weapon, LivingEntity target) {
         // A material's on-hit effect unlocks once that same material has been forged three times.
         if (Forge.hitEffectActive(weapon, Forge.CREEPER)) {
             try {
-                triggerCreeper(player, weapon, event.getEntity());
+                triggerCreeper(player, weapon, target);
             } catch (Throwable throwable) {
                 NeonArsenal.LOGGER.warn("Creeper forge effect failed", throwable);
             }
@@ -186,12 +216,11 @@ public final class ForgeEffects {
         }
         if (Forge.hitEffectActive(weapon, Forge.ECHO)) {
             try {
-                triggerEcho(player, weapon, event.getEntity());
+                triggerEcho(player, weapon, target);
             } catch (Throwable throwable) {
                 NeonArsenal.LOGGER.warn("Echo forge effect failed", throwable);
             }
         }
-        applyCrit(player, weapon, event);
     }
 
     /** Forge critical hit: +2% chance per layer, 1.5x damage with the vanilla crit particles/sound. */
@@ -381,7 +410,11 @@ public final class ForgeEffects {
     /** Last layer string whose held bonuses were applied, per player (avoids per-tick churn). */
     private static final Map<UUID, String> LAST_LAYER_KEY = new HashMap<>();
 
-    /** Applies the held bonuses of every forge layer on the main-hand weapon (only on change). */
+    /**
+     * Applies the held main-hand bonuses (attack speed, movement speed; only on change). The forge
+     * damage percentage is intentionally not a player attribute: it is applied per hit in
+     * {@link #onIncomingDamage} so main- and off-hand attacks each use their own weapon's value.
+     */
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
             return;
@@ -396,7 +429,6 @@ public final class ForgeEffects {
         LAST_LAYER_KEY.put(id, key);
         ForgeStats.Stats stats = ForgeStats.of(weapon);
         applyModifier(player.getAttribute(Attributes.ATTACK_SPEED), ATTACK_SPEED_ID, stats.attackSpeed());
-        applyModifier(player.getAttribute(Attributes.ATTACK_DAMAGE), DAMAGE_ID, stats.damage());
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), MOVE_SPEED_ID, stats.moveSpeed());
     }
 

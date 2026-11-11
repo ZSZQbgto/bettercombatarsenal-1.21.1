@@ -53,13 +53,21 @@ public record WeaponDefinition(
     /** Same id constraint Minecraft applies to registry names. */
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9_]+");
 
+    /** Vanilla player base attack damage, before any held-item modifiers are applied. */
+    private static final float PLAYER_BASE_ATTACK_DAMAGE = 1.0F;
+
     public WeaponDefinition {
         if (id == null || !ID_PATTERN.matcher(id).matches()) {
             throw new IllegalArgumentException("Weapon id must match " + ID_PATTERN.pattern() + ", got: " + id);
         }
         Objects.requireNonNull(tier, "tier");
-        if (attackDamage < 0.0F) {
-            throw new IllegalArgumentException("attackDamage must not be negative, got: " + attackDamage);
+        // attackDamage is the item attribute modifier added on top of the player's base damage and
+        // the tier bonus (see Builder#attackDamage), so it is negative whenever the intended base
+        // damage is below that total (for example the dagger's 2.8 on an iron tier). Only the
+        // resulting base attack damage has to stay positive.
+        float baseAttackDamage = PLAYER_BASE_ATTACK_DAMAGE + tier.getAttackDamageBonus() + attackDamage;
+        if (baseAttackDamage <= 0.0F) {
+            throw new IllegalArgumentException("base attack damage must be positive, got: " + baseAttackDamage);
         }
         abilities = Set.copyOf(Objects.requireNonNull(abilities, "abilities"));
     }

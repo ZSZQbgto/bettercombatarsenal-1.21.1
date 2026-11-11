@@ -5,11 +5,17 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Tracks which hand Better Combat actually used for the current attack (recorded from its own
- * server-side attack selection). When the player dual wields, only main-hand hits may trigger the
- * arsenal's forge/sharpness effects; off-hand hits trigger nothing.
+ * server-side attack selection), so damage/forge/sharpness calculations can use the weapon of the
+ * hand that actually attacked.
+ *
+ * <p>Better Combat temporarily swaps the hand item stacks while it performs an off-hand attack, so
+ * during such a hit the off-hand slot is the authoritative source of the attacking weapon; see
+ * {@link #attackingWeapon(Player)}. Non-Better-Combat skill damage (falling slash, glide slash,
+ * charge thrust) clears the record first, so those always settle with the main-hand weapon.</p>
  *
  * <p>Without Better Combat the tracker stays empty and hits are treated as main-hand hits, which
  * matches vanilla behaviour.</p>
@@ -53,5 +59,16 @@ public final class AttackHandTracker {
             return false;
         }
         return hand.contains("OFF_HAND");
+    }
+
+    /**
+     * {@return the weapon that dealt the current hit}
+     *
+     * <p>During a Better Combat off-hand attack the main-hand stack is temporarily replaced with the
+     * off-hand one, while the off-hand slot still holds the weapon that is actually swinging; every
+     * other hit is settled with the main-hand weapon.</p>
+     */
+    public static ItemStack attackingWeapon(Player player) {
+        return isOffHandAttack(player) ? player.getOffhandItem() : player.getMainHandItem();
     }
 }

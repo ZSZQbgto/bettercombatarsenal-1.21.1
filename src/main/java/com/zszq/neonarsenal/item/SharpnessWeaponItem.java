@@ -221,6 +221,12 @@ public class SharpnessWeaponItem extends Item {
         long multiplier = Math.round(Sharpness.damageMultiplier(sharpness) * 100.0D);
         tooltip.add(Component.translatable(PREFIX + "sharpness_multiplier", multiplier)
                 .withStyle(ChatFormatting.GRAY));
+        double typeMultiplier = ForgeStats.typeDamageMultiplier(stack);
+        if (typeMultiplier > 1.0D) {
+            tooltip.add(Component.translatable(PREFIX + "type_multiplier",
+                            String.format(java.util.Locale.ROOT, "%.2f", typeMultiplier))
+                    .withStyle(ChatFormatting.GRAY));
+        }
 
         tooltip.add(Component.translatable(PREFIX + "section_forge").withStyle(ChatFormatting.GOLD));
         for (String layer : Forge.distinctLayers(stack)) {

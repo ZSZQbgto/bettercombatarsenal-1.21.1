@@ -28,6 +28,7 @@
   "tooltip.bettercombat_neonarsenal.jump_height": "Jump Height",
   "tooltip.bettercombat_neonarsenal.jump_slam": "Jump-Slam Damage",
   "tooltip.bettercombat_neonarsenal.sharpness_multiplier": "Sharpness damage multiplier: %s%%",
+  "tooltip.bettercombat_neonarsenal.type_multiplier": "Forge type damage multiplier: ×%s",
   "tooltip.bettercombat_neonarsenal.layer.chorus": "Chorus Fruit",
   "tooltip.bettercombat_neonarsenal.layer.creeper": "Creeper Head",
   "tooltip.bettercombat_neonarsenal.layer.rabbit": "Rabbit's Foot",

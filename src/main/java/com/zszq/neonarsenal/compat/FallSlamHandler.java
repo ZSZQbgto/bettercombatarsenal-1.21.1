@@ -279,6 +279,9 @@ public final class FallSlamHandler {
         // Extra attack power grows with the fall height and has no cap:
         // blocks 1-10: +4 damage each, blocks 11-20: +2 each, every block beyond: +1 each.
         float damage = (float) (baseDamage + fallBonusDamage(height));
+        // The landing hit is a skill of the main-hand weapon: drop any recorded Better Combat hand so
+        // the forge/sharpness damage calculations never borrow the off-hand weapon's values.
+        AttackHandTracker.clear(player.getUUID());
         Vec3 look = player.getLookAngle();
         Vec3 flatLook = new Vec3(look.x, 0.0D, look.z);
         if (flatLook.lengthSqr() > 1.0E-6D) {
@@ -360,6 +363,8 @@ public final class FallSlamHandler {
             baseDamage = attribute.getValue();
         }
         float damage = (float) (baseDamage + fallBonusDamage(glideSpeedToFallHeight(speed)));
+        // Skill damage always settles with the main-hand weapon (see settleSlam).
+        AttackHandTracker.clear(player.getUUID());
         target.hurt(player.damageSources().playerAttack(player), damage);
         Vec3 dir = new Vec3(target.getX() - player.getX(), 0.0D, target.getZ() - player.getZ());
         if (dir.lengthSqr() > 1.0E-6D) {
