@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = AbstractClientPlayer.class, priority = 2000, remap = false)
 public class FallSlamStopAnimationMixin {
 
-    @Inject(method = "stopAttackAnimation", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "stopAttackAnimation", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private void neonarsenal$protectWindup(float length, CallbackInfo ci) {
         LocalPlayer localPlayer = Minecraft.getInstance().player;
         if ((Object) this != localPlayer) {

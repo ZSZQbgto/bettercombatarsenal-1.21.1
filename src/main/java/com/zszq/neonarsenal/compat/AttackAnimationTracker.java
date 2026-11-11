@@ -37,6 +37,11 @@ public final class AttackAnimationTracker {
         }
     }
 
+    /** Drops every tracked player (used on disconnect). */
+    public static void clearAll() {
+        END_TICK.clear();
+    }
+
     /** {@return whether the player is currently playing an attack animation}. */
     public static boolean isAnimating(Player player) {
         if (player == null) {

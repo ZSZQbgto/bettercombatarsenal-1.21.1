@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "dev.kosmx.playerAnim.core.impl.AnimationProcessor", remap = false)
 public class AnimationApplierCapeMixin {
 
-    @Inject(method = "isActive", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "isActive", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private void neonarsenal$hideCapeAnimation(CallbackInfoReturnable<Boolean> callback) {
         if (CapeRenderState.suppressPalCape) {
             callback.setReturnValue(false);

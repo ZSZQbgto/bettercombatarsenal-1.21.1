@@ -54,6 +54,9 @@ public final class BlockPose {
     private static final Map<UUID, Float> LEG_BLEND = new HashMap<>();
     private static Map<String, Bone> twoHanded;
     private static Map<String, Bone> dualWield;
+    /** Variants authored for a straight-limbed (no FPA bend) player model. */
+    private static Map<String, Bone> twoHandedWithoutFpa;
+    private static Map<String, Bone> dualWieldWithoutFpa;
     private static boolean loadTried;
 
     private BlockPose() {
@@ -91,12 +94,33 @@ public final class BlockPose {
                 && weapon.canBlock();
     }
 
-    /** Applies the blocking pose to the upper body; legs are never touched. */
-    public static void apply(PlayerModel<?> model, AbstractClientPlayer player, float progress) {
+    /**
+     * {@return whether the player blocks with a one-handed block weapon while the off hand holds
+     * another arsenal weapon}, i.e. the case that uses the dual-wield parry pose/animation
+     * ({@code dual_wield_parry}) instead of the two-handed pose.
+     */
+    public static boolean isDualWieldBlock(Player player) {
+        if (!isBlocking(player)) {
+            return false;
+        }
+        return !isTwoHanded(player.getMainHandItem())
+                && player.getOffhandItem().getItem() instanceof SharpnessWeaponItem;
+    }
+
+    /** Applies the blocking pose to the upper body; legs are never touched. */    public static void apply(PlayerModel<?> model, AbstractClientPlayer player, float progress) {
         ensureLoaded();
         boolean mainTwoHanded = isTwoHanded(player.getMainHandItem());
         boolean dual = !mainTwoHanded && player.getOffhandItem().getItem() instanceof SharpnessWeaponItem;
-        Map<String, Bone> bones = dual ? dualWield : twoHanded;
+        // With FancyPlayerAnimation the arm/leg bones are bent by FPA, so the normal variants are
+        // used. Without it the limbs stay straight, so the *_withoutFpa variants (shoulder angles
+        // compensated, bend bones zero) are used instead.
+        boolean fpa = com.zszq.neonarsenal.client.fx.FpaBend.available();
+        Map<String, Bone> bones = dual
+                ? (fpa ? dualWield : dualWieldWithoutFpa)
+                : (fpa ? twoHanded : twoHandedWithoutFpa);
+        if (bones == null) {
+            bones = dual ? dualWield : twoHanded;
+        }
         if (bones == null) {
             return;
         }
@@ -204,7 +228,8 @@ public final class BlockPose {
         model.hat.copyFrom(model.head);
 
         RENDER_BENDS.put(model, new float[]{bendAngle(bones.get("right_arm_bend"), progress),
-                bendAngle(bones.get("left_arm_bend"), progress), progress});
+                bendAngle(bones.get("left_arm_bend"), progress), progress,
+                bendAngle(bones.get("left_leg_bend"), progress), fileLegWeight});
     }
 
     private static void shiftY(ModelPart part, float offset) {
@@ -227,13 +252,23 @@ public final class BlockPose {
 
     public static void applyRenderBends(PlayerModel<?> model) {
         float[] bend = RENDER_BENDS.get(model);
-        if (bend == null || bend[2] <= 0.0F) {
+        if (bend == null) {
             return;
         }
-        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.rightArm, bend[0], bend[2]);
-        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftArm, bend[1], bend[2]);
-        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.rightSleeve, bend[0], bend[2]);
-        com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftSleeve, bend[1], bend[2]);
+        if (bend[2] > 0.0F) {
+            com.zszq.neonarsenal.client.fx.FpaBend.blend(model.rightArm, bend[0], bend[2]);
+            com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftArm, bend[1], bend[2]);
+            com.zszq.neonarsenal.client.fx.FpaBend.blend(model.rightSleeve, bend[0], bend[2]);
+            com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftSleeve, bend[1], bend[2]);
+        }
+        if (bend.length > 4 && bend[4] > 0.0F) {
+            // The authored leg pose bends the left knee 6 model units below the hip; the pants outer
+            // layer is a separate part, so it gets the same bend.
+            com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftLeg, bend[3], bend[4],
+                    com.zszq.neonarsenal.client.fx.FpaBend.VANILLA_UPPER_LEG);
+            com.zszq.neonarsenal.client.fx.FpaBend.blend(model.leftPants, bend[3], bend[4],
+                    com.zszq.neonarsenal.client.fx.FpaBend.VANILLA_UPPER_LEG);
+        }
     }
 
     private static void setBone(ModelPart part, Bone bone, float baseX, float baseY, float baseZ,
@@ -320,16 +355,41 @@ public final class BlockPose {
         return id != null && TWO_HANDED.contains(id.getPath());
     }
 
+    /** Drops the parsed animation bones so a resource reload can re-read them. */
+    public static void reset() {
+        twoHanded = null;
+        dualWield = null;
+        twoHandedWithoutFpa = null;
+        dualWieldWithoutFpa = null;
+        loadTried = false;
+    }
+
+    /** Drops all per-player/per-model render state (used on disconnect). */
+    public static void clearAll() {
+        PROGRESS.clear();
+        LEG_BLEND.clear();
+        RENDER_BENDS.clear();
+    }
+
     private static void ensureLoaded() {
         if (loadTried) {
             return;
         }
-        twoHanded = load("two_handed_parry");
-        dualWield = load("dual_wield_parry");
+        twoHanded = load("two_handed_parry", "parry");
+        twoHandedWithoutFpa = load("two_handed_parry", "parrywithoutfpa");
+        dualWield = load("dual_wield_parry", "dualwieldparry");
+        dualWieldWithoutFpa = load("dual_wield_parry", "dualwieldparrywithoutfpa");
+        // Older packs only shipped one variant: fall back to the available one.
+        if (twoHandedWithoutFpa == null) {
+            twoHandedWithoutFpa = twoHanded;
+        }
+        if (dualWieldWithoutFpa == null) {
+            dualWieldWithoutFpa = dualWield;
+        }
         loadTried = twoHanded != null && dualWield != null;
     }
 
-    private static Map<String, Bone> load(String name) {
+    private static Map<String, Bone> load(String name, String animationKey) {
         try {
             ResourceLocation id = ResourceLocation.fromNamespaceAndPath(
                     NeonArsenal.MODID, "animations/" + name + ".json");
@@ -343,7 +403,9 @@ public final class BlockPose {
                 if (animations == null || animations.isEmpty()) {
                     return null;
                 }
-                JsonObject animation = animations.entrySet().iterator().next().getValue().getAsJsonObject();
+                JsonObject animation = animations.has(animationKey)
+                    ? animations.getAsJsonObject(animationKey)
+                    : animations.entrySet().iterator().next().getValue().getAsJsonObject();
                 JsonObject bones = animation.getAsJsonObject("bones");
                 if (bones == null) {
                     return null;

@@ -124,13 +124,21 @@ public final class WeaponTrailFx {
             } catch (Throwable ignored) {
                 attackHandIsOffHandMethod = null;
             }
-            NeonArsenal.LOGGER.info(
+            NeonArsenal.LOGGER.debug(
                     "Better Combat swing detection ready; blade sparks follow Better Combat animations only.");
-        } catch (Throwable ignored) {
+        } catch (Throwable throwable) {
             betterCombatClientInterface = null;
-            NeonArsenal.LOGGER.info(
-                    "Better Combat API not available; no blade sparks are emitted (vanilla swings never emit them).");
+            NeonArsenal.LOGGER.warn(
+                    "Better Combat API not available; no blade sparks are emitted (vanilla swings never emit them).",
+                    throwable);
         }
+    }
+
+    /** Drops the last hand captures (used on disconnect so no stale stack is kept). */
+    public static void clearCaptures() {
+        mainHand = null;
+        offHand = null;
+        display = null;
     }
 
     /**
@@ -364,12 +372,6 @@ public final class WeaponTrailFx {
 
     private static Capture fresh(Capture capture) {
         return capture != null && capture.fresh() ? capture : null;
-    }
-
-    /** Blade of the weapon actually held in a hand (main hand first). */
-    private static Capture heldCapture(LocalPlayer player) {
-        List<Capture> captures = heldCaptures(player);
-        return captures.isEmpty() ? null : captures.get(0);
     }
 
     /** Fresh blade captures for every hand that holds an arsenal weapon. */

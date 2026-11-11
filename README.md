@@ -32,16 +32,16 @@
 
 ### 2. 四种锻刃材料
 
-铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 3 层，**同种材料最多锻 2 次**（第 2 次开启该材料的命中效果），**每 2 层稀有度 +1 阶**（1 层不提升，2 层起名称变黄）。
+铁砧中武器 + 材料，8 级经验、1:1 消耗；最多 **6 层**，**同种材料最多锻 2 次**（第 2 次开启该材料的命中效果），**每 2 层稀有度 +1 阶**（0–1 层普通/白，2–3 层罕见/黄，4–5 层稀有/青，6 层史诗/紫）。
 
 | 材料 | 随身效果 | 命中效果 | 冷却 |
 |---|---|---|---|
 | 紫颂果 | 伤害 +10%、移速 +15% | 20 格内敌人拉进攻击范围，僵直 4 秒 | 10 秒 |
-| 苦力怕头颅 | 伤害 +5%、攻速 +15% | 无敌苦力怕（免疫伤害与击退）远离并强吸敌对生物，目标锁定至爆炸无法脱锁，随后爆炸（不破坏地形、仅伤敌对，dummmmmmy 人偶除外） | 30 秒 |
+| 苦力怕头颅 | 伤害 +5%、攻速 +15% | 无敌苦力怕（免疫伤害与击退）像原版躲避猫一样用 `AvoidEntityGoal` **真实寻路**远离玩家（4 秒，半径 24 格、1.2 冲刺速度），并强吸敌对生物，随后原地白色闪烁 1.4 秒并爆炸（不破坏地形、仅伤敌对，dummmmmmy 人偶除外） | 30 秒 |
 | 兔子脚 | 攻速 +5%、跳跃高度 +150%、跃斩增伤 +100% | 4 只无敌雷霆大兔子（免疫伤害与击退），每 0.5 秒咬 3 个目标各 4 伤害，10 秒后消失 | 30 秒 |
 | 回响碎片 | 攻速 -50%、伤害 +100% | 8 格内敌人互相攻击 8 秒 | 30 秒 |
 
-**解锁规则**：每种材料锻入 1 次只生效其「随身效果」；**同种材料再锻入第 2 次**才开启该材料的「命中效果」（每种材料最多 2 层，武器总共最多 3 层，可混搭不同材料）。Shift 详情在只锻入 1 次时显示「命中效果：同种材料再锻入一次后开启」。
+**解锁规则**：每种材料锻入 1 次只生效其「随身效果」；**同种材料再锻入第 2 次**才开启该材料的「命中效果」（每种材料最多 2 层，武器总共最多 6 层，可混搭不同材料）。Shift 详情在只锻入 1 次时显示「命中效果：同种材料再锻入一次后开启」。
 
 ### 3. 两个开关
 
@@ -86,6 +86,7 @@
 - 手持武器长按右键进入格挡（对方块右键同样进入格挡，不触发方块交互）；松开恢复，进入/退出各有 **0.1 秒**过渡。
 - 右键优先级：目标为工作方块（带 GUI，如工作台/熔炉/箱子）时，若**玩家与工作方块之间**有敌对生物 → 格挡；否则正常工作方块；非工作方块 → 格挡。
 - 单持武器与双手武器使用**双手格挡**姿态；真正双持（副手也持本模组武器）使用**双持格挡**姿态。
+- **格挡动画分两套**：动画文件里同时提供 `parry`/`dualwieldparry`（装 FPA 时使用，手臂和膝盖的弯曲由 FPA 的 bend 实现驱动）与 `parrywithoutfpa`/`dualwieldparrywithoutfpa`（不装 FPA 时使用：肩部角度已补偿、弯曲骨骼为 0，因此角色保持直臂直腿）。`BlockPose` 按 `FpaBend.available()` 自动选择对应 animation 键。
 - 格挡期间**强制退出潜行**，且**无法疾跑**；若开始格挡时正在疾跑，会立即中断疾跑。
 - 只格挡**前方 210°（左右各 105°）**内来源的伤害；背后/侧面来源与环境伤害不受格挡。
 - 成功格挡**免疫本次伤害**；**触发格挡音效/粒子时**消耗 **本次伤害 ×10%（向上取整）**的锋利度，间隔内的格挡不消耗；**松开右键后获得 0.2 秒无敌**。
@@ -97,9 +98,12 @@
 - **骑马 / 坐船 / 坐矿车等坐姿格挡时**，下半身保持原版坐姿（不套用动画文件的站姿腿），只有上半身进入格挡姿态，整体保持乘坐高度。
 - **骑乘活体坐骑**（马、驴、骆驼等）行走/奔跑时，角色会随坐骑步态轻微上下起伏（幅度约 1 像素，速度越快越明显），武器与披风等一起跟随；船/矿车不应用。
 - **穿戴鞘翅格挡时**，鞘翅会收拢为潜行时的姿态，并跟随躯干/肩膀一起运动，不会与身体分离。
+- **格挡时的披风挂点（无 FPA）**：格挡姿态会旋转躯干，而原版 `CapeLayer` 在模型原点绘制披风，挂点会离开肩膀后沿。未安装 FancyPlayerAnimation 时，`CapeLayerBlockPoseMixin` 在格挡姿态激活期间（`BlockPose.progressOf > 0`）对披风渲染套用当前 `model.body` 的 `translateAndRotate`，让披风跟着旋转后的肩膀上沿/后沿；安装 FPA 时由 FPA 处理，跳过该变换。
 - **披风（Better Combat）**：Better Combat 使用的 Player Animator Library 会把披风挂到被动画/弯曲的躯干上，导致披风紧贴后背。未安装 FancyPlayerAnimation 时，本模组在 `CapeLayer` 渲染期间把该库的动画状态临时判为非活动（`CapeLayerVanillaMixin` + `AnimationApplierCapeMixin`），让披风按**原版渲染**（移动摆动、步态晃动、下蹲倾斜）；安装 FPA 时保持 FPA 自己的披风处理不变。
 - **格挡优先级最高**：开始格挡会清除武器的物品冷却，不受攻击冷却与切换武器冷却影响；格挡期间左键攻击/挖掘会被取消，确保格挡动作优先。
 - **第一人称格挡**：格挡时武器切换到设计好的第一人称格挡姿态（_fpparry 模型的第一人称 display 变换），松开后平滑回到普通持握。
+- **第三人称攻击姿态**：静置时使用现有静置放置；攻击动画（含普通攻击与下落斩击/冲锋前刺的手动 BC 攻击动画）期间改用 `bctppitemholding` 导出的攻击放置（`<id>_tppattack`，7 把有差异的武器，匕首不变），**0.10 s 淡入 / 0.15 s 淡出**，联机时其他玩家的攻击同样生效；左手/副手保持现有静置放置（资源包未提供左手攻击数据）。
+- **双持格挡（长剑/刺剑）**：主手长剑或刺剑格挡且副手也持本模组武器时，副手使用该武器 `_fpparry` 的**左手格挡变换**（长剑/刺剑已提供），与主手共用同一 0.18 秒平滑过渡和视图上抬；未设计副手姿态的武器（如双手武器）保持普通副手持握，不会被错误上抬。
 
 ## 武器
 
@@ -189,16 +193,16 @@
 
 ### 2. Four forge materials
 
-Anvil weapon + material: 8 levels, 1:1, up to 3 layers, **each material can be forged twice** (the second copy unlocks that material's on-hit effect), **+1 rarity per 2 layers** (a single layer does not raise the tier; from 2 layers the name turns yellow).
+Anvil weapon + material: 8 levels, 1:1, up to **6 layers**, **each material can be forged twice** (the second copy unlocks that material's on-hit effect), **+1 rarity per 2 layers** (layers 0-1 COMMON/white, 2-3 UNCOMMON/yellow, 4-5 RARE/aqua, 6 EPIC/light purple).
 
 | Material | While held | On hit | Cooldown |
 |---|---|---|---|
 | Chorus Fruit | +10% damage, +15% move speed | Pull mobs within 20 blocks into range, stun 4 s | 10 s |
-| Creeper Head | +5% damage, +15% attack speed | An invulnerable creeper walks off, pulls mobs, then explodes | 30 s |
+| Creeper Head | +5% damage, +15% attack speed | An invulnerable creeper flees the player with **real pathfinding** using vanilla creeper-vs-cat `AvoidEntityGoal` (4 s, radius 24, sprint 1.2), pulls mobs, then flashes in place for 1.4 s and explodes | 30 s |
 | Rabbit's Foot | +5% attack speed, +150% jump height, +100% jump-slam damage | Four invulnerable thunder rabbits (immune to damage and knockback) bite 3 targets for 4 damage every 0.5 s, vanish after 10 s | 30 s |
 | Echo Shard | -50% attack speed, +100% damage | Mobs within 8 blocks fight each other for 8 s | 30 s |
 
-**Unlock rule**: forging one copy of a material only grants that material's "while held" bonus; **a second copy of the same material** unlocks its "on hit" effect (each material can be forged twice, up to 3 layers per weapon, different materials can be mixed). While only one copy is forged, the Shift details show "On-hit effect: forge a second copy of this material to unlock".
+**Unlock rule**: forging one copy of a material only grants that material's "while held" bonus; **a second copy of the same material** unlocks its "on hit" effect (each material can be forged twice, up to 6 layers per weapon, different materials can be mixed). While only one copy is forged, the Shift details show "On-hit effect: forge a second copy of this material to unlock".
 
 ### 3. Two switches
 
@@ -243,6 +247,7 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, **each material can be f
 - Hold right-click with a weapon to block (right-clicking a block also blocks instead of interacting); release to recover, with a **0.1 s** transition in and out.
 - Right-click priority: on a work block (workbench/furnace/chest etc.), if a hostile mob stands between you and that block → block; otherwise use the block normally; other blocks → block.
 - Single-wield and two-handed weapons use the **two-handed parry**; genuinely dual-wielded pairs (offhand also holds an arsenal weapon) use the **dual-wield parry**.
+- **Two block-animation variants**: each animation file ships `parry`/`dualwieldparry` (used with FancyPlayerAnimation, where FPA drives the bent arms and knees) and `parrywithoutfpa`/`dualwieldparrywithoutfpa` (used without FPA: the shoulder angles are compensated and the bend bones are zero, so the limbs stay straight). `BlockPose` selects the matching animation key from `FpaBend.available()`.
 - While blocking, sneaking is suppressed and sprinting is disabled; starting a block while sprinting interrupts the sprint immediately.
 - Only damage coming from the **frontal 210° arc (105° each side)** is blocked; damage from behind/sides and environmental damage are not.
 - A successful block negates the incoming damage; the **parry sound/particles** trigger costs **ceil(10% of the incoming damage)** sharpness (blocks inside the gap cost none), and grants a **0.2 s invulnerability window after releasing right-click**.
@@ -254,9 +259,11 @@ Anvil weapon + material: 8 levels, 1:1, up to 3 layers, **each material can be f
 - **Blocking while riding (horse, boat, minecart, ...)**: the lower body keeps the vanilla seated pose and the model keeps the seat height; only the upper body enters the block pose.
 - **While riding a living mount** (horse, donkey, camel, ...) the rider heaves subtly with the mount's gait (about one pixel, stronger at higher speed); the weapon and layers follow. Boats and minecarts are unaffected.
 - **Blocking with an elytra equipped** folds the wings into the sneaking elytra pose and keeps them attached to the posed torso/shoulders instead of floating apart.
+- **Cape anchor while blocking (without FPA)**: the blocking pose rotates the torso, while vanilla `CapeLayer` draws the cape at the model origin, so the anchor leaves the shoulders' back edge. Without FancyPlayerAnimation, `CapeLayerBlockPoseMixin` applies the current `model.body` `translateAndRotate` to the cape render while the block pose is active (`BlockPose.progressOf > 0`), so the cape follows the posed shoulders; with FPA installed FPA handles it and the transform is skipped.
 - **Cape (Better Combat)**: the Player Animator Library used by Better Combat attaches the cape to the animated/bent torso, which makes the cape stick to the back. Without FancyPlayerAnimation installed the mod makes that library report its animation as inactive while `CapeLayer` renders (`CapeLayerVanillaMixin` + `AnimationApplierCapeMixin`), so the cape renders exactly like **vanilla** (movement swing, walk bob, crouch tilt); with FPA installed FPA keeps its own cape handling.
 - **Blocking has the highest priority**: starting a block clears the item cooldown and is not gated by attack or weapon-switch cooldowns; left-click attacks/mining are cancelled while blocking.
-- **First-person parry**: while blocking, the weapon switches to the authored first-person parry pose (the `_fpparry` model's first-person display transform) with a **0.18 s smoothstep** blend to and from the normal grip; a successful block bursts the same weapon-coloured sparks as third person (14 particles, glowing when glow ink was forged) at the first-person weapon position.
+- **Third-person attack pose**: idle keeps the existing resting placement; during a Better Combat attack animation (normal attacks, plus the manual falling-slash / charge-thrust animations) the held weapon switches to the attack placement exported from `bctppitemholding` (`<id>_tppattack`, the seven weapons whose values differ; the dagger is unchanged) with a **0.10 s fade-in / 0.15 s fade-out**. Other players' attacks in multiplayer use it too; the left hand/offhand keeps the existing resting placement (the pack provides no left-hand attack data).
+- **First-person parry**: while blocking, the weapon switches to the authored first-person parry pose (the `_fpparry` model's first-person display transform) with a **0.18 s smoothstep** blend to and from the normal grip; **dual-wield parry (sword/rapier main hand)**: when the off hand also holds an arsenal weapon, the off-hand blade uses its `_fpparry` **left-hand** parry transform with the same 0.18 s blend and view lift (sword/rapier provide authored left-hand poses; weapons without one keep their normal off-hand grip and are not lifted); a successful block bursts the same weapon-coloured sparks as third person (14 particles, glowing when glow ink was forged) at the first-person weapon position.
 
 ### 8. Enchantments
 

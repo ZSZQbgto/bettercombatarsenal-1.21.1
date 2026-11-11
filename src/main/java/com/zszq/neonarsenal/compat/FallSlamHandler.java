@@ -58,7 +58,7 @@ public final class FallSlamHandler {
      * arrives (the movement packet is validated/skipped while a chunk is still loading), so the
      * pending falling slash must survive that delay instead of being consumed by the player tick.
      */
-    private static final long FALL_EVENT_TIMEOUT_MS = 5000L;
+    private static final long FALL_EVENT_TIMEOUT_TICKS = 100L;
 
     /** How many player ticks after settling the delayed landing fall event is still accepted. */
     private static final int DELAYED_EVENT_TICKS = 40;
@@ -89,7 +89,7 @@ public final class FallSlamHandler {
             return;
         }
         PENDING.put(player.getUUID(), fall);
-        PENDING_SINCE.put(player.getUUID(), System.currentTimeMillis());
+        PENDING_SINCE.put(player.getUUID(), player.level().getGameTime());
         SLAM_ACTIVE.add(player.getUUID());
         // A fresh slam starts a new landing settlement even if the previous one is still settling.
         SETTLED.remove(player.getUUID());
@@ -216,7 +216,7 @@ public final class FallSlamHandler {
             return;
         }
         Long since = PENDING_SINCE.get(id);
-        boolean expired = since != null && System.currentTimeMillis() - since > FALL_EVENT_TIMEOUT_MS;
+        boolean expired = since != null && player.level().getGameTime() - since > FALL_EVENT_TIMEOUT_TICKS;
         Integer settledAt = SETTLED_AT.get(id);
         boolean overdue = settledAt != null && player.tickCount - settledAt > DELAYED_EVENT_TICKS;
         if (expired || overdue) {
@@ -238,6 +238,19 @@ public final class FallSlamHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             clearPending(player.getUUID());
         }
+    }
+
+    /** Drops every per-player state when the player disconnects (no stale slam across sessions). */
+    public static void clear(UUID id) {
+        PENDING.remove(id);
+        PENDING_SINCE.remove(id);
+        LANDED_FALL.remove(id);
+        FALL_IMPACT.remove(id);
+        SETTLED.remove(id);
+        SETTLED_AT.remove(id);
+        SLAM_ACTIVE.remove(id);
+        WINDUP_ACTIVE.remove(id);
+        WINDUP_GROUNDED.remove(id);
     }
 
     private static void clearPending(UUID id) {

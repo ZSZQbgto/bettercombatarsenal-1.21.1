@@ -82,6 +82,12 @@ public final class TrailFollow {
         TRACKED.add(new Tracked(particle, caster));
     }
 
+    /** Drops all tracked particles and the current caster (used on disconnect). */
+    public static void clear() {
+        TRACKED.clear();
+        caster = null;
+    }
+
     /** Called every client tick: moves all live trail particles by their caster's tick movement. */
     public static void tick() {
         if (TRACKED.isEmpty()) {

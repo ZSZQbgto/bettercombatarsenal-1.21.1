@@ -80,6 +80,11 @@ public final class FallSlamClient {
     private static LocalPlayer trackedPlayer;
     private static FallSlamWindSound windSound;
 
+    /** Id of the current client tick, so the ground raycast is evaluated at most once per tick. */
+    private static long heightTickId;
+    private static long heightCacheTick = Long.MIN_VALUE;
+    private static double heightCache;
+
     private static boolean wasAttackDown;
     private static boolean glidingSlash;
     private static int keyDownTicks;
@@ -108,6 +113,7 @@ public final class FallSlamClient {
     public static void preTick(ClientTickEvent.Pre event) {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
+        heightTickId++;
         if (player == null) {
             trackedPlayer = null;
             resetLocal();
@@ -600,12 +606,18 @@ public final class FallSlamClient {
     }
 
     private static double heightToGround(LocalPlayer player) {
+        if (heightCacheTick == heightTickId) {
+            // preTick and tick() both need the height in the same client tick: one raycast is enough.
+            return heightCache;
+        }
         Vec3 start = player.position();
         BlockHitResult hit = player.level().clip(new ClipContext(start, start.add(0.0D, -64.0D, 0.0D),
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        if (hit.getType() == HitResult.Type.MISS) {
-            return 64.0D;
-        }
-        return Math.max(0.0D, start.y - hit.getLocation().y);
+        double value = hit.getType() == HitResult.Type.MISS
+                ? 64.0D
+                : Math.max(0.0D, start.y - hit.getLocation().y);
+        heightCacheTick = heightTickId;
+        heightCache = value;
+        return value;
     }
 }

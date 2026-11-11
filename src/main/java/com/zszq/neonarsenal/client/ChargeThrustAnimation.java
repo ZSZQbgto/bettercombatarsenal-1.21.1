@@ -3,6 +3,7 @@ package com.zszq.neonarsenal.client;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+import com.zszq.neonarsenal.NeonArsenal;
 import com.zszq.neonarsenal.compat.ChargeThrustState;
 
 import net.bettercombat.client.animation.AttackAnimationSubStack;
@@ -33,6 +34,7 @@ public final class ChargeThrustAnimation {
 
     private static Method cooldownMethod;
     private static boolean cooldownResolved;
+    private static boolean failureLogged;
 
     private ChargeThrustAnimation() {
     }
@@ -62,11 +64,17 @@ public final class ChargeThrustAnimation {
                     ANIMATION, AnimatedHand.TWO_HANDED, length, UPSWING);
             paused = true;
             setSpeed(player, 1.0F);
-        } catch (Throwable ignored) {
+        } catch (Throwable throwable) {
             // Better Combat missing or its internals changed: degrade to a plain attack.
             controlling = false;
             paused = false;
             frozen = false;
+            if (!failureLogged) {
+                failureLogged = true;
+                NeonArsenal.LOGGER.warn(
+                        "Charge-thrust animation integration failed; the charge degrades to a normal attack",
+                        throwable);
+            }
         } finally {
             ChargeThrustState.allowAnimation = false;
         }
@@ -107,21 +115,19 @@ public final class ChargeThrustAnimation {
 
     /** {@return true once the manual animation reached its final keyframe (or no longer exists)}. */
     public static boolean isFinished(LocalPlayer player) {
-        Object animation = currentAnimation(player);
-        if (animation == null) {
+        if (!BcAnimationAccess.hasAnimation(player)) {
             return true;
         }
-        try {
-            Object active = animation.getClass().getMethod("isActive").invoke(animation);
-            if (!Boolean.TRUE.equals(active)) {
-                return true;
-            }
-            int tick = currentTick(player);
-            int end = endTick(player);
-            return tick >= 0 && end > 0 && tick >= Math.max(1, end - 1);
-        } catch (Throwable ignored) {
+        Boolean active = BcAnimationAccess.isActive(player);
+        if (active != null && !active) {
+            return true;
+        }
+        int tick = BcAnimationAccess.currentTick(player);
+        int end = BcAnimationAccess.endTick(player);
+        if (tick < 0 || end <= 0) {
             return false;
         }
+        return tick >= Math.max(1, end - 1);
     }
 
     /** Fades the finished pose to idle over the given number of ticks. */
@@ -178,86 +184,24 @@ public final class ChargeThrustAnimation {
     }
 
     private static float cooldownTicks(LocalPlayer player) {
-        if (!cooldownResolved) {
-            cooldownResolved = true;
-            try {
-                Class<?> helper = Class.forName("net.bettercombat.logic.PlayerAttackHelper");
-                cooldownMethod = helper.getMethod("getAttackCooldownTicksCapped",
-                        net.minecraft.world.entity.player.Player.class);
-            } catch (Throwable ignored) {
-                cooldownMethod = null;
-            }
-        }
-        if (cooldownMethod != null) {
-            try {
-                float ticks = ((Number) cooldownMethod.invoke(null, player)).floatValue();
-                return Math.max(1.0F, ticks);
-            } catch (Throwable ignored) {
-                // Fall through to the default cooldown.
-            }
-        }
-        return 20.0F;
+        return BcAnimationAccess.cooldownTicks(player);
     }
 
     private static Object currentAnimation(LocalPlayer player) {
-        try {
-            Field field = findField(player.getClass(), "attackAnimation");
-            if (field == null) {
-                return null;
-            }
-            field.setAccessible(true);
-            Object substack = field.get(player);
-            if (!(substack instanceof AttackAnimationSubStack)) {
-                return null;
-            }
-            return ((AttackAnimationSubStack) substack).base.getAnimation();
-        } catch (Throwable ignored) {
-            return null;
-        }
+        AttackAnimationSubStack stack = BcAnimationAccess.substack(player);
+        return stack == null || stack.base == null ? null : stack.base.getAnimation();
     }
 
     private static int currentTick(LocalPlayer player) {
-        Object animation = currentAnimation(player);
-        if (animation == null) {
-            return -1;
-        }
-        try {
-            Method method = animation.getClass().getMethod("getCurrentTick");
-            return ((Number) method.invoke(animation)).intValue();
-        } catch (Throwable ignored) {
-            return -1;
-        }
+        return BcAnimationAccess.currentTick(player);
     }
 
     private static int endTick(LocalPlayer player) {
-        Object animation = currentAnimation(player);
-        if (animation == null) {
-            return -1;
-        }
-        try {
-            Object data = animation.getClass().getMethod("getData").invoke(animation);
-            return data.getClass().getField("endTick").getInt(data);
-        } catch (Throwable ignored) {
-            return -1;
-        }
+        return BcAnimationAccess.endTick(player);
     }
 
     private static void setSpeed(LocalPlayer player, float speed) {
-        try {
-            Field field = findField(player.getClass(), "attackAnimation");
-            if (field == null) {
-                return;
-            }
-            field.setAccessible(true);
-            Object substack = field.get(player);
-            if (!(substack instanceof AttackAnimationSubStack animation)) {
-                return;
-            }
-            animation.speed.speed = speed;
-            animation.speed.gears = java.util.List.of();
-        } catch (Throwable ignored) {
-            // Optional compatibility only.
-        }
+        BcAnimationAccess.setSpeed(player, speed);
     }
 
     private static Field findField(Class<?> type, String name) {

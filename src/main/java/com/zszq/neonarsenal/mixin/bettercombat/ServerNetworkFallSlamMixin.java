@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "net.bettercombat.network.ServerNetwork", remap = false)
 public class ServerNetworkFallSlamMixin {
 
-    @Inject(method = "handleAttackRequest", at = @At("HEAD"), remap = false)
+    @Inject(method = "handleAttackRequest", at = @At("HEAD"), remap = false, require = 0)
     private static void neonarsenal$markFallSlam(Packets.C2S_AttackRequest packet, MinecraftServer server,
                                                   ServerPlayer player, ServerGamePacketListenerImpl listener,
                                                   CallbackInfo ci) {
@@ -29,7 +29,7 @@ public class ServerNetworkFallSlamMixin {
      * the end of the upswing. Remember the jump-slam animation here so the later request resolves to
      * the same slam attack instead of a normal attack chosen from the server's newer state.
      */
-    @Inject(method = "handleAttackAnimation", at = @At("HEAD"), remap = false)
+    @Inject(method = "handleAttackAnimation", at = @At("HEAD"), remap = false, require = 0)
     private static void neonarsenal$trackJumpSlamAnimation(Packets.AttackAnimation packet,
                                                            MinecraftServer server,
                                                            ServerPlayer player,

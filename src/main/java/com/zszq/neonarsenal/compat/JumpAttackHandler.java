@@ -87,7 +87,7 @@ public final class JumpAttackHandler {
      * pick a normal attack while the client showed the slam animation. The server therefore selects
      * the same slam the client animated.
      */
-    private static final Map<UUID, Long> CLIENT_SLAM_UNTIL_MS =
+    private static final Map<UUID, Long> CLIENT_SLAM_UNTIL =
             new java.util.concurrent.ConcurrentHashMap<>();
 
     private static Method attackCooldownMethod;
@@ -117,9 +117,9 @@ public final class JumpAttackHandler {
                 && holdsJumpSlamWeapon(player);
         if (slam) {
             long lifeTicks = Math.max(5, upswingTicks) + 10L;
-            CLIENT_SLAM_UNTIL_MS.put(id, System.currentTimeMillis() + lifeTicks * 50L);
+            CLIENT_SLAM_UNTIL.put(id, player.level().getGameTime() + lifeTicks);
         } else {
-            CLIENT_SLAM_UNTIL_MS.remove(id);
+            CLIENT_SLAM_UNTIL.remove(id);
         }
     }
 
@@ -181,12 +181,12 @@ public final class JumpAttackHandler {
         } else {
             // Server: follow the animation the client actually started (see onClientAttackAnimation),
             // because the request arrives after the upswing and the player may have landed by then.
-            Long until = CLIENT_SLAM_UNTIL_MS.get(player.getUUID());
+            Long until = CLIENT_SLAM_UNTIL.get(player.getUUID());
             if (until == null) {
                 return null;
             }
-            if (System.currentTimeMillis() > until) {
-                CLIENT_SLAM_UNTIL_MS.remove(player.getUUID());
+            if (player.level().getGameTime() > until) {
+                CLIENT_SLAM_UNTIL.remove(player.getUUID());
                 return null;
             }
         }
@@ -235,7 +235,7 @@ public final class JumpAttackHandler {
             }
             if (!logged) {
                 logged = true;
-                NeonArsenal.LOGGER.info(
+                NeonArsenal.LOGGER.debug(
                         "Jump attack enabled: falling jump attacks play the claymore slam with the weapon's own sound");
             }
             if (player.level().isClientSide()) {
@@ -305,7 +305,7 @@ public final class JumpAttackHandler {
         if (until == null) {
             return false;
         }
-        if (System.currentTimeMillis() >= until) {
+        if (player.tickCount >= until) {
             JUMP_BLOCK_UNTIL.remove(player.getUUID());
             return false;
         }
@@ -320,6 +320,14 @@ public final class JumpAttackHandler {
         if (event.getEntity() instanceof Player player) {
             JUMP_AIRBORNE.add(player.getUUID());
         }
+    }
+
+    /** Drops all per-player jump-attack state when the player disconnects. */
+    public static void clear(UUID id) {
+        JUMP_AIRBORNE.remove(id);
+        JUMP_BLOCK_UNTIL.remove(id);
+        CLIENT_SLAM_UNTIL.remove(id);
+        RECENT_JUMP_SLAM.remove(id);
     }
 
     /** Clears the jump window once the player is back on the ground. */
@@ -371,9 +379,21 @@ public final class JumpAttackHandler {
             }
         }
         int blockedTicks = Math.max(1, (cooldownTicks + 1) / 2);
-        JUMP_BLOCK_UNTIL.put(player.getUUID(), System.currentTimeMillis() + blockedTicks * 50L);
-        NeonArsenal.LOGGER.debug(
-                "Jump-attack cooldown: jump blocked for {} of {} ticks", blockedTicks, cooldownTicks);
+        JUMP_BLOCK_UNTIL.put(player.getUUID(), (long) (player.tickCount + blockedTicks));
+        if (player.level().isClientSide()) {
+            // Only the client tracks this cooldown, so log once per jump instead of once per side.
+            NeonArsenal.LOGGER.debug(
+                    "Jump-attack cooldown: jump blocked for {} of {} ticks", blockedTicks, cooldownTicks);
+        }
+    }
+
+    /** Success detail is debug-only; a missing piece is a real problem and is warned about. */
+    private static void logStatus(String message, boolean ok) {
+        if (ok) {
+            NeonArsenal.LOGGER.debug("{}: true", message);
+        } else {
+            NeonArsenal.LOGGER.warn("{}: false", message);
+        }
     }
 
     /** Logs whether the Better Combat mixin was actually applied. */
@@ -387,9 +407,9 @@ public final class JumpAttackHandler {
                     break;
                 }
             }
-            NeonArsenal.LOGGER.info("Jump-attack mixin applied: {}", applied);
+            logStatus("Jump-attack mixin applied", applied);
             init();
-            NeonArsenal.LOGGER.info("Jump-attack reflection ready: {}", ready);
+            logStatus("Jump-attack reflection ready", ready);
             try {
                 Class<?> livingEntity = Class.forName("net.minecraft.world.entity.LivingEntity");
                 boolean jumpBlocked = false;
@@ -399,12 +419,12 @@ public final class JumpAttackHandler {
                         break;
                     }
                 }
-                NeonArsenal.LOGGER.info("Jump-attack jump blocking mixin applied: {}", jumpBlocked);
+                logStatus("Jump-attack jump blocking mixin applied", jumpBlocked);
             } catch (Throwable ignored) {
-                NeonArsenal.LOGGER.info("Jump-attack jump blocking mixin applied: false");
+                NeonArsenal.LOGGER.warn("Jump-attack jump blocking mixin applied: false");
             }
         } catch (Throwable throwable) {
-            NeonArsenal.LOGGER.info("Better Combat not present; jump-attack override disabled");
+            NeonArsenal.LOGGER.debug("Better Combat not present; jump-attack override disabled");
         }
     }
 
@@ -549,7 +569,9 @@ public final class JumpAttackHandler {
             ready = true;
         } catch (Throwable throwable) {
             ready = false;
-            NeonArsenal.LOGGER.debug("Better Combat jump-attack integration is unavailable", throwable);
+            NeonArsenal.LOGGER.warn(
+                    "Better Combat jump-attack integration is unavailable; jump attacks use vanilla attacks",
+                    throwable);
         }
     }
 }

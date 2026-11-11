@@ -43,10 +43,10 @@ public final class NeonArsenalIntegration {
 
         for (WeaponDefinition weapon : WeaponCatalog.all()) {
             if (weapon.hasBetterCombatPreset()) {
-                NeonArsenal.LOGGER.info("Arsenal weapon '{}' uses Better Combat preset family '{}'",
+                NeonArsenal.LOGGER.debug("Arsenal weapon '{}' uses Better Combat preset family '{}'",
                         weapon.id(), weapon.betterCombatPreset());
             } else {
-                NeonArsenal.LOGGER.info("Arsenal weapon '{}' uses vanilla combat behaviour", weapon.id());
+                NeonArsenal.LOGGER.debug("Arsenal weapon '{}' uses vanilla combat behaviour", weapon.id());
             }
         }
     }

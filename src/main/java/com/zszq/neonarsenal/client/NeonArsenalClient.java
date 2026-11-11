@@ -13,6 +13,7 @@ import com.zszq.neonarsenal.weapon.WeaponCatalog;
 import com.zszq.neonarsenal.weapon.WeaponDefinition;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -22,6 +23,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -47,6 +49,8 @@ public final class NeonArsenalClient {
         modEventBus.addListener(this::registerAdditionalModels);
         modEventBus.addListener(this::registerClientExtensions);
         modEventBus.addListener(this::registerGeometryLoaders);
+        modEventBus.addListener(this::registerReloadListeners);
+        modEventBus.addListener(this::onModelBakingCompleted);
         modEventBus.addListener(this::registerParticleProviders);
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.addListener(this::clientTick);
@@ -57,6 +61,7 @@ public final class NeonArsenalClient {
         NeoForge.EVENT_BUS.addListener(NeonArsenalClient::onItemTooltip);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onRenderHand);
         NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.fx.BlockShakeEffects::onCameraAngles);
+        NeoForge.EVENT_BUS.addListener(com.zszq.neonarsenal.client.ClientStateCleanup::onLoggingOut);
     }
 
     /**
@@ -80,6 +85,7 @@ public final class NeonArsenalClient {
 
     private void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(WeaponGlowConfig::load);
+        event.enqueueWork(com.zszq.neonarsenal.compat.IntegrationProbe::runClient);
     }
 
     private void clientTick(ClientTickEvent.Post event) {
@@ -120,6 +126,41 @@ public final class NeonArsenalClient {
                 sprites -> new GlowSparkParticle.Provider(sprites, 1.0F, 1.0F, 1.0F, 0.95F));
     }
 
+    /**
+     * The authored holding/blocking poses are read from the resource manager once. Reset them on a
+     * resource reload so a pack change (F3+T) re-reads the animation JSON without a client restart.
+     */
+    /** The model manager reloaded: drop every cached BakedModel/correction. */
+    private void onModelBakingCompleted(ModelEvent.BakingCompleted event) {
+        clearModelCaches();
+    }
+
+    private static void clearModelCaches() {
+        com.zszq.neonarsenal.client.fx.WeaponGlow.clearModelCache();
+        com.zszq.neonarsenal.client.NeonArsenalItemRenderer.clearModelCache();
+        com.zszq.neonarsenal.client.FirstPersonParryPose.clearCorrectionCache();
+        com.zszq.neonarsenal.client.ThirdPersonAttackPose.clearCorrectionCache();
+    }
+
+    private void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(new SimplePreparableReloadListener<Void>() {
+            @Override
+            protected Void prepare(net.minecraft.server.packs.resources.ResourceManager manager,
+                                   net.minecraft.util.profiling.ProfilerFiller profiler) {
+                return null;
+            }
+
+            @Override
+            protected void apply(Void value, net.minecraft.server.packs.resources.ResourceManager manager,
+                                 net.minecraft.util.profiling.ProfilerFiller profiler) {
+                com.zszq.neonarsenal.client.BlockPose.reset();
+                com.zszq.neonarsenal.client.HoldPose.reset();
+                com.zszq.neonarsenal.client.FirstPersonParryPose.clearAll();
+                clearModelCaches();
+            }
+        });
+    }
+
     private void registerGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {
         event.register(PermissiveModelLoader.ID, new PermissiveModelLoader());
     }
@@ -133,6 +174,9 @@ public final class NeonArsenalClient {
             }
             if (hasModel(weapon.id() + "_fpparry")) {
                 event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_fpparry")));
+            }
+            if (hasModel(weapon.id() + "_tppattack")) {
+                event.register(ModelResourceLocation.standalone(model("item/" + weapon.id() + "_tppattack")));
             }
         }
     }

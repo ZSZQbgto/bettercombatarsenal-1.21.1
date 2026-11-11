@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "net.minecraft.client.player.AbstractClientPlayer", remap = false, priority = 2000)
 public class ClientPlayerAttackAnimationMixin {
 
-    @Inject(method = "playAttackAnimation", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "playAttackAnimation", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private void neonarsenal$filterFallSlamAnimation(String animation, AnimatedHand hand,
                                                      float length, float upswing, CallbackInfo ci) {
         AbstractClientPlayer player = (AbstractClientPlayer) (Object) this;
@@ -50,7 +50,7 @@ public class ClientPlayerAttackAnimationMixin {
         AttackAnimationTracker.onAnimationStart(player, length);
     }
 
-    @Inject(method = "stopAttackAnimation", at = @At("HEAD"), remap = false)
+    @Inject(method = "stopAttackAnimation", at = @At("HEAD"), remap = false, require = 0)
     private void neonarsenal$trackAnimationStop(float length, CallbackInfo ci) {
         AttackAnimationTracker.onAnimationStop((AbstractClientPlayer) (Object) this);
     }

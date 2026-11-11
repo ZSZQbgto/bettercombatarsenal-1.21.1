@@ -6,7 +6,7 @@
 
 | 术语 | 说明 |
 |---|---|
-| 锻刃层（layer） | 一次成功锻造附加到武器上的永久效果记录，最多 3 层 |
+| 锻刃层（layer） | 一次成功锻造附加到武器上的永久效果记录，最多 6 层 |
 | 层 id | `chorus`（紫颂果）、`creeper`（苦力怕头颅）、`rabbit`（兔子脚）、`echo`（回响碎片） |
 | 混合色 | 多层锻刃时按 HSV 色相插值（短弧色相平均 + 饱和度/明度平均）得到的刀光/粒子/刀刃光效颜色 |
 | 标记效果 | 服务端施加、客户端读取的隐藏效果，用于同步苦力怕闪烁进度 |
@@ -35,11 +35,11 @@
 
 边界规则：
 
-- 已满 3 层或该材料已锻 2 次：该材料无效。同种材料允许且仅允许第 2 次，用于开启该材料的命中效果（层 id 可重复，`Forge.level` 统计次数、`Forge.distinctLayers` 供颜色/持有效果去重）。
+- 已满 6 层或该材料已锻 2 次：该材料无效。同种材料允许且仅允许第 2 次，用于开启该材料的命中效果（层 id 可重复，`Forge.level` 统计次数、`Forge.distinctLayers` 供颜色/持有效果去重）。
 - 蜜脾与三种材料互斥：蜜脾走锋利度修复（`SharpnessEvents`），三种材料走锻刃（`ForgeAnvil`）。
 - 锻刃**不写入真实附魔**（火焰效果在命中时结算），因此武器不会出现附魔光效。
 - 锻刃不改变锋利度、不改变武器基础属性。
-- 稀有度：按 `layers.size()/2` 提升（每 2 层 +1 阶，0–1 层普通），追加层时由 `Forge.add` → `Forge.updateRarity` 写入；砂轮抹除会移除该组件。
+- 稀有度：按 `layers.size()/2` 提升（每 2 层 +1 阶：0–1 层普通/白，2–3 层罕见/黄，4–5 层稀有/青，6 层史诗/紫），追加层时由 `Forge.add` → `Forge.updateRarity` 写入；砂轮抹除会移除该组件。
 - **解锁规则**：只锻入 1 层时仅结算该层的持有效果，命中效果不触发；锻入第 2 层后，全部已锻层的命中效果开启（`Forge.hitEffectsActive` 以 `layers.size() >= 2` 判定）。
 
 ## 3. 颜色混合规范
@@ -79,7 +79,7 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 
 **颜色优先级**：若武器有染料颜色，则刀刃发光、粒子与 BC 刀光都使用染料颜色（优先级高于锻刃混合色；无锻刃层时也生效）。所有锻刃层（紫颂/苦力怕/兔子/回响）的混合色同样统一作用于这三处渲染。
 
-**Tooltip**：默认显示缩略信息（锋利度、颜色、`锻刃效果: 层名（II）`、`按住 Shift 查看…` 提示）；**每 2 层锻刃使物品稀有度 +1 阶**（`layers.size()/2`：0–1 层保持普通/白，2–3 层升为 uncommon/黄；名称颜色随之变化；由 `Forge.updateRarity` 写入 `DataComponents.RARITY`，砂轮清除）；**按住 Shift** 时显示 `— 综合性能 —`（伤害、攻速、移速、跳跃高度、跃斩增伤、锐度伤害系数）与 `— 锻刃效果 —`（各层持有/效果说明；其中**不包含粒子效果相关内容**）。颜色行：有染料显示 `着色模块: #RRGGBB`；仅有锻刃层时显示 `锻刃颜色: #RRGGBB`。
+**Tooltip**：默认显示缩略信息（锋利度、颜色、`锻刃效果: 层名（II）`、`按住 Shift 查看…` 提示）；**每 2 层锻刃使物品稀有度 +1 阶**（`layers.size()/2`：0–1 层普通/白，2–3 层罕见/黄，4–5 层稀有/青，6 层史诗/紫；名称颜色随之变化；由 `Forge.updateRarity` 写入 `DataComponents.RARITY`，砂轮清除）；**按住 Shift** 时显示 `— 综合性能 —`（伤害、攻速、移速、跳跃高度、跃斩增伤、锐度伤害系数）与 `— 锻刃效果 —`（各层持有/效果说明；其中**不包含粒子效果相关内容**）。颜色行：有染料显示 `着色模块: #RRGGBB`；仅有锻刃层时显示 `锻刃颜色: #RRGGBB`。
 
 **刀刃发光混合色**：单层锻刃显示该层纯色；**两层及以上**时刀刃发光使用各层颜色的**混合色**（HSV 色相插值，见 3.2），不再做渐变/滚动。
 
@@ -106,7 +106,7 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 1. 冷却：600 tick（30 秒），按武器堆叠记录；
 2. **持有效果**：增伤 +5%、攻速 +15%；
 3. 触发：命中任意生物（含副手限制：仅主手攻击）；
-3. 在命中位置生成一只**完全无敌**苦力怕（伤害事件置 0、取消击退、击退抗性拉满），向**远离玩家**的方向**快速**行走 **4 秒（80 tick）**（每 tick 直接位移 0.25 格，约 5 格/秒，不依赖寻路）；每 tick 重新设置 `setInvulnerable(true)` 并回满血，伤害事件强制置 0，任何生物都无法击杀；
+3. 在命中位置生成一只**完全无敌**苦力怕（伤害事件置 0、取消击退、击退抗性拉满），用**原版躲避猫的方式**远离玩家：给它添加与 vanilla `Creeper` 逃跑猫相同的 `AvoidEntityGoal<Player>`（真实寻路、1.0/1.2 速度、半径 24 格以覆盖 4 秒撤退），清空其目标选择器，移动完全交给 AI 寻路（不再直接位移）；每 tick 重新设置 `setInvulnerable(true)` 并回满血，伤害事件强制置 0，任何生物都无法击杀；
 4. 行走期间每 tick 强吸引 **6 格**内的**敌对生物**（不含玩家、Boss、本模组召唤物，以及 dummmmmmy 人偶）朝苦力怕靠拢（0.45 格/步）；一旦被吸引即**锁定至爆炸**，即使被推出 6 格范围也不会脱锁（距离 >16 格时加速拉回），并持续清除其目标/寻路；
 5. 4 秒后停止行走，开始原版苦力怕 **白色闪烁膨胀** 1.4 秒（28 tick）；
 6. 1.4 秒后苦力怕消失并执行自定义爆炸（vanilla `Creeper#explodeCreeper` 已由 mixin 取消，绝不破坏地形）：
@@ -197,7 +197,7 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 
 - 颜色与效果只由**层组合**决定，与武器种类无关；
 - 每把武器独立保存自己的层（同一物品类型的不同堆叠也各自独立）；
-- 同一武器最多 3 层，层组合不分职业/预设。
+- 同一武器最多 6 层，层组合不分职业/预设。
 
 ## 6. 组合、优先级与交互
 
@@ -229,11 +229,11 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 
 - **多人游戏**：锻刃、冷却、粒子判定均为服务端结算（组件同步），客户端只负责渲染；专用服务器已通过启动验证。
 
-- **JEI**：安装后提供「锻刃」配方分类（208 条：锻刃层首层与第二层、基础开关、染料，每把武器 26 条），铁砧为催化剂；未安装时该插件不会被加载。
+- **JEI**：安装后提供「锻刃」配方分类（208 条：锻刃层首层与第二层、基础开关、染料，每把武器 26 条），铁砧为催化剂；未安装时该插件不会被加载。武器最多 6 层，JEI 只展示第 1/2 次锻造的示例，第 3–6 层可继续在铁砧中锻造。
 
 - **Better Combat 为必需前置**（2.4.0+，需 playeranimator、cloth_config）：缺失时模组不会加载。
 - 光影/Iris：刀刃发光沿用既有 Iris 适配路径；锻刃颜色仍生效。
-- 旧存档：无 `forge` 组件的武器视为未锻刃；已满 3 层的旧武器不可继续锻造。
+- 旧存档：无 `forge` 组件的武器视为未锻刃；已满 6 层的旧武器不可继续锻造。
 - 无指令入口：锻造只能通过铁砧进行（锋利度指令已移除）。
 
 ## 8. 验收用例
@@ -244,15 +244,17 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 - [ ] 冷却绑定武器：丢弃/切换/重进后剩余冷却仍在（按游戏时间）。
 - [ ] 回响碎片锻刃：命中后 8 格内 ≥2 敌对生物互相残杀 8 秒、深暗之域粒子、30 秒武器冷却。
 - [ ] 各层颜色：单层与混合结果符合第 3 节表格（刀刃光效、BC 刀光、粒子一致）。
-- [ ] 满 3 层与重复层材料无效；锋利度与已有层保留。
+- [ ] 满 6 层与重复层材料无效；锋利度与已有层保留。
 - [ ] 锋利度 ≤1500 时刀光与粒子完全消失，修复后恢复。
 
 
 ## 8. 格挡（Blocking）
 
 - 手持任意本模组武器长按右键进入格挡；`SharpnessWeaponItem#use` 开始物品使用，松开即停止。
+- 格挡动画的两套变体：`two_handed_parry.json` / `dual_wield_parry.json` 各包含两个 animation 键——`parry`/`dualwieldparry`（FPA 存在时使用）与 `parrywithoutfpa`/`dualwieldparrywithoutfpa`（FPA 不存在时使用）。`BlockPose.load(file, animationKey)` 按 `FpaBend.available()` 选择：装 FPA 时用前者，`applyRenderBends` 通过 `FpaBend` 把 `right_arm_bend`/`left_arm_bend`（肘，肩下 4 模型单位）和 `left_leg_bend`（膝，胯下 6 模型单位）交给 FPA 的 bend 实现，袖子/裤腿外层用同一角度；不装 FPA 时用后者：肩部旋转已补偿、`*_bend` 为 0，且 `FpaBend` 无 `BendHooks` 时直接返回，因此保持直臂直腿，不做任何网格弯曲。
 - 动画：客户端 `BlockPose` 读取 `assets/bettercombat_neonarsenal/animations/two_handed_parry.json` / `dual_wield_parry.json`（已同步 resourcepacks 最新版本），在 `PlayerModel#setupAnim` 末尾混合；进入/退出各 0.1 秒。单持武器与双手武器使用双手姿态；仅当副手也持本模组武器（真正双持）时使用双持姿态。slim 皮肤补偿手臂枢轴 0.5 单位偏移；躯干/身体/头部/手部只使用动作文件（不叠加其它动画）；手臂应用动作文件的 `right_arm/left_arm` 旋转；格挡时在 `AgeableListModel.renderToBuffer` 前由 `BlockBendRenderMixin` 调用 `FpaBend.blend`，读取 `right_arm_bend/left_arm_bend` 第一分量（**正 X**，修正先前反向）作为关节角，以进度作为权重叠加到当前 bend；非格挡不写 bend；躯干旋转后重新贴合腰部（y=12），头部吸附到躯干顶部并下移 0.5 单位贴住身体；格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；静止时全身在接地偏移基础上再上抬 1 个模型单位（约 1 像素）；不强制 crouch、不改相机；，手臂按躯干旋转 + 最终位移的完整变换定位，避免身体、头手与腿的间隙；腿部完全不参与格挡、保持原版；外层皮肤部件（袖子、外套、裤腿与头部外层 `hat`）在姿态与接地偏移之后重新 `copyFrom` 同步——头部外层此前漏同步，导致格挡时外层皮肤（含 3D 皮肤层 compatibilityMode 注入到 `hat` 的 3D 网格）停在原地，现已修正；格挡时屏蔽潜行：格挡期间每 tick 强制 `setShiftKeyDown(false)` 且客户端 setPose(STANDING)（服务端/客户端），相机/眼高保持站立，松开后恢复普通潜行输入。格挡期间禁止疾跑，正在疾跑会立即中断；同时屏蔽潜行。格挡优先级最高：`use` 清除物品冷却，不受攻击/切换武器冷却影响；格挡时取消左键攻击与挖掘事件。格挡判定沿用原版受击路径但限定前方 210°（±105°）：每次该范围内会生效的伤害事件触发一次成功格挡，消耗 ceil(伤害×10%) 锋利度、播放音效、格挡期间取消所有伤害（持续无敌）；松开格挡结束后额外给予 4 tick（0.2 秒）无敌；清除受击红闪、在武器位置发送 14 颗火星粒子（无需烈焰粉；颜色取 `Forge.displayColor`，锻入发光墨囊时粒子 full-bright 发光，否则使用世界光照）；音效与粒子按玩家持久数据记录下一次可用时间，两次之间强制随机 0.3–0.8 秒间隔（6–16 tick，每次重掷），避免史莱姆等高频率攻击逐 tick 触发。无额外击退抗性属性；环境伤害与背后/侧面伤害不受格挡。姿态 mixin 使用较低优先级，确保在其它玩家动画的 TAIL 注入之后应用，手部动作为**加法叠加**（不替换其它动作），格挡姿态进入/退出 0.1 秒，idle↔格挡腿部切换 0.1 秒（文件腿权重 = progress × legBlend）；格挡静止↔移动的腿部姿态切换 0.1 秒；腿部按同一 progress 插值并同步 pants；格挡静止时腿部使用动画文件 `right_leg/left_leg`，腿根 z 从文件 +2 收回 0 与 body 接洽；移动时保持原版行走腿；静止时全身在接地偏移基础上再上抬 1 个模型单位（约 1 像素）；不强制 crouch、不改相机；渲染。
-- 第一人称格挡：`FirstPersonParryPose`（由 `NeonArsenalItemRenderer` 在第一人称上下文调用）读取 `assets/bettercombat_neonarsenal/models/item/<id>_fpparry.json`（来自 `resourcepacks/firstpersonparry`，只包含 `firstperson_righthand`/`firstperson_lefthand` 的 display 变换）。格挡时按 `BlockPose.isBlocking(player)` 且渲染的 `ItemStack` 与 `player.getUseItem()` 相同来判定；通过 `inverse(正常手持变换) × 格挡变换` 把第一人称手部矩阵替换成格挡姿态，**0.18 秒**线性进度 + smoothstep 缓动淡入淡出（进出两端速度为 0，不跳变；左撇子用 `firstperson_lefthand`，`leftHand` 标志与 `ItemRenderer` 一致）；替换时必须把原版物品渲染在 display 变换后追加的 `translate(-0.5,-0.5,-0.5)` 居中偏移共轭消掉（否则修正矩阵会作用在被旋转过的坐标系里，把武器推到屏幕左下角外），即修正矩阵为 `Centre⁻¹ · Normal⁻¹ · Lift · Parry · Centre`；作者的第一人称 display 变换是按 BlockBench 预览锚点调的，因此再在视图空间额外上抬 `VIEW_LIFT = 0.22` 格（1 格 = 16 显示单位）后与正常持握插值，使格挡刀身出现在视野下半部；未提供 `_fpparry` 模型的武器（如匕首）保持原版第一人称持握。`_fpparry` 模型由 `NeonArsenalClient#registerAdditionalModels` 按约定注册。第一人称成功格挡的迸发粒子：`ClientLevelParrySoundMixin` 收到 parry 音效时，若本地玩家正在格挡、处于第一人称且音效距离自身 ≤3 格，由 `FirstPersonBlockBurst` 在相机前方偏右下（近似持刀位置）按现有粒子规则迸发 14 颗 `BlockSparkOptions`（颜色取 `Forge.displayColor`、锻入发光墨囊时 full-bright，与第三人称世界坐标迸发一致）；世界坐标迸发仍由服务端 `BlockHandler` 发送给所有附近玩家。
+- 第三人称攻击姿态：`ThirdPersonAttackPose`（由 `NeonArsenalItemRenderer` 在 `THIRD_PERSON_RIGHT_HAND` 上下文调用，实体由 `ItemInHandLayerContextMixin` 在 `ItemInHandLayer#render` HEAD/RETURN 捕获，支持联机其他玩家）读取 `assets/bettercombat_neonarsenal/models/item/<id>_tppattack.json`（从 `resourcepacks/bctppitemholding` 提取的 `thirdperson_righthand` 攻击放置；仅 7 把差异武器，匕首无差异）。触发条件：`AttackAnimationTracker.isAnimating(player)`（所有玩家的 BC 攻击动画）或本地玩家 `FallSlamAnimation.isControlling()`/`ChargeThrustAnimation.isControlling()`（手动动画冻结时长超过 tracker 时仍保持）；用 `Centre⁻¹ · Normal⁻¹ · Attack · Centre` 把现有静置放置替换为攻击放置（与原版 display 后 `translate(-0.5,-0.5,-0.5)` 居中偏移共轭），权重 **0.10 s 淡入 / 0.15 s 淡出**，只处理右手上下文（包内无左手攻击数据，左手/副手保持静置）；修正矩阵按 itemId 缓存，模型重载/断线时清空。
+- 第一人称格挡：`FirstPersonParryPose`（由 `NeonArsenalItemRenderer` 在第一人称上下文调用）读取 `assets/bettercombat_neonarsenal/models/item/<id>_fpparry.json`（来自 `resourcepacks/firstpersonparry`，只包含 `firstperson_righthand`/`firstperson_lefthand` 的 display 变换）。格挡时按 `BlockPose.isBlocking(player)` 且渲染的 `ItemStack` 与 `player.getUseItem()` 相同来判定；**双持格挡**时（`BlockPose.isDualWieldBlock(player)`：主手为可格挡单体武器且副手也是本模组武器），若渲染的是 `player.getOffhandItem()`，副手也进入格挡姿态判定，并使用其 `_fpparry` 的 `firstperson_lefthand` 变换（与主手共用同一 `updateProgress` 进度与 smoothstep，0.18 秒）；仅当 `_fpparry` 的左手变换与普通左手变换不同（当前为长剑/刺剑）时才应用，避免给未设计副手格挡姿态的武器（双手武器等）错误叠加 `VIEW_LIFT` 上抬。第三人称双持姿态已由 `dual_wield_parry` 的 `right_arm/left_arm/right_arm_bend/left_arm_bend` 驱动，无需额外代码；通过 `inverse(正常手持变换) × 格挡变换` 把第一人称手部矩阵替换成格挡姿态，**0.18 秒**线性进度 + smoothstep 缓动淡入淡出（进出两端速度为 0，不跳变；左撇子用 `firstperson_lefthand`，`leftHand` 标志与 `ItemRenderer` 一致）；替换时必须把原版物品渲染在 display 变换后追加的 `translate(-0.5,-0.5,-0.5)` 居中偏移共轭消掉（否则修正矩阵会作用在被旋转过的坐标系里，把武器推到屏幕左下角外），即修正矩阵为 `Centre⁻¹ · Normal⁻¹ · Lift · Parry · Centre`；作者的第一人称 display 变换是按 BlockBench 预览锚点调的，因此再在视图空间额外上抬 `VIEW_LIFT = 0.22` 格（1 格 = 16 显示单位）后与正常持握插值，使格挡刀身出现在视野下半部；未提供 `_fpparry` 模型的武器（如匕首）保持原版第一人称持握。`_fpparry` 模型由 `NeonArsenalClient#registerAdditionalModels` 按约定注册。第一人称成功格挡的迸发粒子：`ClientLevelParrySoundMixin` 收到 parry 音效时，若本地玩家正在格挡、处于第一人称且音效距离自身 ≤3 格，由 `FirstPersonBlockBurst` 在相机前方偏右下（近似持刀位置）按现有粒子规则迸发 14 颗 `BlockSparkOptions`（颜色取 `Forge.displayColor`、锻入发光墨囊时 full-bright，与第三人称世界坐标迸发一致）；世界坐标迸发仍由服务端 `BlockHandler` 发送给所有附近玩家。
 - 判定：服务端 `LivingIncomingDamageEvent` 中若玩家正在使用本模组武器，则取消本次攻击伤害，调用 `Sharpness.consume` 消耗 1 点，并播放 `bettercombat_neonarsenal:parry`；播放时客户端通过监听本地 parry 音效触发手部/武器 2px、0.1s 颤动与视角轻微颤动（不再使用自定义网络包），服务端给玩家一个约 1/4 格的后退推力；取消伤害的同时给予 4 tick 受击无敌，避免同一攻击逐 tick 重复触发音效。
 - 连招：`PlayerTickEvent` 记录格挡开始时间；松开时若持续 >40 tick（2 秒）则通过反射调用 `PlayerAttackProperties.setComboCount(player, -1)` 打断连招，≤40 tick 保持连招。
 
@@ -298,7 +300,7 @@ tooltip 的 `锻刃: xxx` 每行仍显示**该层自身颜色**，不显示混�
 
 附魔支持：arsenal 武器不可损坏，原版 `Item.isEnchantable` 依赖 MAX_DAMAGE 组件，因此 `SharpnessWeaponItem.isEnchantable` 恒真。天然可附魔列表由 `WeaponEnchantments` 按武器 id 白名单给出（剑类：锋利/亡灵杀手/节肢杀手/击退/抢夺/火焰附加/耐久/经验修补/横扫；阔剑、双刃斧、长枪不含横扫），通过 NeoForge `IItemExtension.supportsEnchantment`（铁砧与附魔书）和 `isPrimaryItemFor`（附魔台候选）生效；三种伤害附魔继续走原版 `exclusive_set/damage` 互斥。致密/破甲/穿刺不在任何武器白名单内，附魔台与铁砧无法获得；`EnchantCommandArsenalMixin` 用 `@Redirect` 在 `/enchant` 命令里跳过 `supportsEnchantment`（仅 arsenal 武器），因此命令可强制附上，原版排斥仍由命令自身的 `isEnchantmentCompatible` 保证。Tooltip：附魔**只列名称**，其数值并入综合百分比——`EnchantmentTips.damageFraction` 以武器显示攻击伤害（玩家基础 1 + 主手 `ATTACK_DAMAGE` 修饰符）为分母，把锋利（首级 +1、之后每级 +0.5）、亡灵/节肢（2.5×等级）、火焰附加（4×等级）求和后一次性折算并与锻刃伤害百分比相加；`EnchantmentTips.attackSpeedFraction` 读取 `EnchantmentEffectComponents.ATTRIBUTES` 中的 `ATTACK_SPEED` 修饰符（`ADD_VALUE` 除以 4.0 基础攻速，`ADD_MULTIPLIED_BASE/TOTAL` 直接作为比例）并与锻刃攻速百分比相加；Shift 视图同样只列附魔名称。**耐久（Unbreaking）**：武器无耐久，改为按原版耐久公式降低锋利度损耗率——`SharpnessEvents` 在命中/挖掘时调用 `Sharpness.rollConsume`，等级 L 时每次使用以 1/(L+1) 概率消耗 1 点（I 50%、II 33.3%、III 25%），期望损耗率为 1/(L+1)。原版附魔名称行在 `ItemTooltipEvent` 中从 arsenal 武器 tooltip 移除，避免与自定义明细重复；`SharpnessWeaponItem.isFoil` 恒 false，附魔武器不显示原版附魔光效。
 
-持刀动作：单持长剑/阔剑/双刃剑/双刃斧/横刀/刺剑/长枪时，`HoldPose` 读取 `assets/bettercombat_neonarsenal/animations/weapon_holding_action_from_behind.json`（geckolib 格式：`right_arm` 旋转、`right_arm_bend` 肘弯 -22.5°），在 `PlayerModel#setupAnim` TAIL（`PlayerBlockPoseMixin`）按 0.1s 权重混合到主手手臂（左撇子镜像到左手），肘弯经 `FpaBend` 在 `AgeableListModel#renderToBuffer` 前施加；**武器位置与朝向沿用原版第三人称手持渲染**（不读取 `right_item`，不替换原版手部链）。权重按 0.1s 混合，格挡/出招时淡出。移动摆动叠加在手臂 xRot：行走中轴 +5°、扇面 4°，疾跑中轴 +10°、扇面 8°，静止 0°，用 `sin(limbSwing*0.6662)` 振荡并按 8/s 平滑中轴与扇面。招式过渡：`PoseForPlayerHoldPoseMixin` 把 BC `poseForPlayer` 的主手 pose 置空（副手保留原 pose），攻击动画由 BC 播放，期间 `AttackAnimationTracker`（在 `ClientPlayerAttackAnimationMixin` 的 play/stop 中记录）让持刀姿势淡出、收招后淡入；格挡姿态优先，格挡期间持刀姿势淡出且不施加。双持时副手手臂与副手物品完全不处理。附魔流光：锻入发光墨囊后 `WeaponGlow` 不再用单色 putBulkData，而是逐顶点颜色——按 overlay 模型（刀刃遮罩）最长轴归一化得到刀刃位置，颜色相位 = 位置×1.4 周期 + 时间×0.45 周期/秒，色相在武器当前颜色环（染料/锻刃混色 RGB→HSV）**±12°** 附近波动（第二谐波权重 0.25，颜色变化域收窄），并叠加亮度波动使未染色刀刃也有明暗流光；additive/translucent/deferred/emissive 四种渲染路径与 Iris 第一人称延迟 pass 共用同一发光函数（NEW_ENTITY 格式补 overlay/normal，其余补 lightmap）。
+持刀动作：单持长剑/阔剑/双刃剑/双刃斧/横刀/刺剑/长枪时，`HoldPose` 读取 `assets/bettercombat_neonarsenal/animations/weapon_holding_action_from_behind.json`（geckolib 格式：`right_arm` 旋转、`right_arm_bend` 肘弯 -22.5°），在 `PlayerModel#setupAnim` TAIL（`PlayerBlockPoseMixin`）按 0.1s 权重混合到主手手臂（左撇子镜像到左手），肘弯经 `FpaBend` 在 `AgeableListModel#renderToBuffer` 前施加；**武器位置与朝向沿用原版第三人称手持渲染**（不读取 `right_item`，不替换原版手部链）。权重按 0.1s 混合，格挡/出招时淡出；下落斩击与冲锋前刺的主动画控制期间（`FallSlamAnimation.isControlling()`/`FallSlamState.blockAttacks`、`ChargeThrustClient.isCharging()`，仅对本地玩家）也保持让位，避免冻结动画超过 `AttackAnimationTracker` 计时后持刀姿势在斩击中途回弹。移动摆动叠加在手臂 xRot：行走中轴 +5°、扇面 4°，疾跑中轴 +10°、扇面 8°，静止 0°，用 `sin(limbSwing*0.6662)` 振荡并按 8/s 平滑中轴与扇面。招式过渡：`PoseForPlayerHoldPoseMixin` 把 BC `poseForPlayer` 的主手 pose 置空（副手保留原 pose），攻击动画由 BC 播放，期间 `AttackAnimationTracker`（在 `ClientPlayerAttackAnimationMixin` 的 play/stop 中记录）让持刀姿势淡出、收招后淡入；格挡姿态优先，格挡期间持刀姿势淡出且不施加。双持时副手手臂与副手物品完全不处理。附魔流光：锻入发光墨囊后 `WeaponGlow` 不再用单色 putBulkData，而是逐顶点颜色——按 overlay 模型（刀刃遮罩）最长轴归一化得到刀刃位置，颜色相位 = 位置×1.4 周期 + 时间×0.45 周期/秒，色相在武器当前颜色环（染料/锻刃混色 RGB→HSV）**±12°** 附近波动（第二谐波权重 0.25，颜色变化域收窄），并叠加亮度波动使未染色刀刃也有明暗流光；additive/translucent/deferred/emissive 四种渲染路径与 Iris 第一人称延迟 pass 共用同一发光函数（NEW_ENTITY 格式补 overlay/normal，其余补 lightmap）。
 
 ## 9. 骑乘起伏（RiderBob）
 
@@ -332,4 +334,5 @@ Better Combat 使用的 Player Animator Library（PAL）在动画激活时，会
 - `CapeLayerVanillaMixin`（priority 500，早于 PAL 的默认 1000）在 `CapeLayer#render` HEAD 置 `CapeRenderState.suppressPalCape = true`，RETURN 清掉；
 - `pal.AnimationApplierCapeMixin` 在该标记为真时让 PAL 的 `AnimationApplier#isActive()` 返回 false，PAL 的披风分支因此走非活动路径（只把 cloak 弯曲清零，不动 pose stack），披风由原版 `CapeLayer` 正常渲染（移动摆动/步态晃动/下蹲倾斜）；
 - 标记只在这一个渲染调用内为真，正常动画播放不受影响；
-- 安装 FancyPlayerAnimation 时 `CapeRenderState.suppressPalCape` 保持 false，FPA 自己的披风处理照常生效。
+- 安装 FancyPlayerAnimation 时 `CapeRenderState.suppressPalCape` 保持 false，FPA 自己的披风处理照常生效；
+- 格挡姿态的披风挂点：原版 `CapeLayer` 在模型原点绘制披风，而格挡姿态会旋转躯干并重新贴接腿部，挂点会离开肩膀后沿。未安装 FPA 时 `CapeLayerBlockPoseMixin` 在 `BlockPose.progressOf(player) > 0.001` 的披风渲染期间 HEAD `pushPose()` 并执行 `PlayerModel.body.translateAndRotate(poseStack)`，RETURN 处 pop（`@Unique` 标记保证成对）；这样披风挂点跟随旋转后的肩膀上沿/后沿，淡入淡出与格挡姿态进度一致。装 FPA 时 `FpaBend.available()` 为真，跳过该变换由 FPA 处理披风。

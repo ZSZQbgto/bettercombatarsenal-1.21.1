@@ -1,0 +1,15 @@
+{
+  "parent": "builtin/entity",
+  "textures": {
+    "particle": "bettercombat_neonarsenal:weapon/rapier"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "translation": [
+        0,
+        10,
+        2
+      ]
+    }
+  }
+}

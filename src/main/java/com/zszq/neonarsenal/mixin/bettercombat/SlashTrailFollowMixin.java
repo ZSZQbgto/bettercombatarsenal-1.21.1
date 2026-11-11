@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class SlashTrailFollowMixin {
 
     @Inject(method = "spawnParticles(Lnet/minecraft/client/player/AbstractClientPlayer;ZFLjava/util/List;Lnet/bettercombat/api/fx/TrailAppearance;)V",
-            at = @At("HEAD"), remap = false)
+            at = @At("HEAD"), remap = false, require = 0)
     private static void neonarsenal$beginTrailFollow(AbstractClientPlayer player, boolean offHand,
                                                      float weaponRange, List<?> placements,
                                                      TrailAppearance appearance, CallbackInfo ci) {
@@ -26,7 +26,7 @@ public class SlashTrailFollowMixin {
     }
 
     @Inject(method = "spawnParticles(Lnet/minecraft/client/player/AbstractClientPlayer;ZFLjava/util/List;Lnet/bettercombat/api/fx/TrailAppearance;)V",
-            at = @At("RETURN"), remap = false)
+            at = @At("RETURN"), remap = false, require = 0)
     private static void neonarsenal$endTrailFollow(AbstractClientPlayer player, boolean offHand,
                                                    float weaponRange, List<?> placements,
                                                    TrailAppearance appearance, CallbackInfo ci) {

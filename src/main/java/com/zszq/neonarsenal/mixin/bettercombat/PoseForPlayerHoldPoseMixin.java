@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "net.bettercombat.logic.PlayerAttackHelper", remap = false)
 public class PoseForPlayerHoldPoseMixin {
 
-    @Inject(method = "poseForPlayer", at = @At("RETURN"), cancellable = true, remap = false)
+    @Inject(method = "poseForPlayer", at = @At("RETURN"), cancellable = true, remap = false, require = 0)
     private static void neonarsenal$replaceMainHandPose(Player player,
                                                         CallbackInfoReturnable<Pose> callback) {
         Pose pose = callback.getReturnValue();

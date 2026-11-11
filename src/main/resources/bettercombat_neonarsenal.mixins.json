@@ -36,7 +36,9 @@
     "CapeLayerVanillaMixin",
     "pal.AnimationApplierCapeMixin",
     "CapeLayerVanillaEarlyMixin",
-    "CapeLayerVanillaLateMixin"
+    "CapeLayerVanillaLateMixin",
+    "ItemInHandLayerContextMixin",
+    "CapeLayerBlockPoseMixin"
   ],
   "injectors": {
     "defaultRequire": 1

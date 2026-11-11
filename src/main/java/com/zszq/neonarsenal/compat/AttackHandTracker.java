@@ -33,6 +33,12 @@ public final class AttackHandTracker {
         LAST_TICK.put(player.getUUID(), player.level().getGameTime());
     }
 
+    /** Forgets the last recorded hand of a player. */
+    public static void clear(UUID id) {
+        LAST_HAND.remove(id);
+        LAST_TICK.remove(id);
+    }
+
     /** True when the most recent Better Combat attack was performed with the off hand. */
     public static boolean isOffHandAttack(Player player) {
         String hand = LAST_HAND.get(player.getUUID());
@@ -42,6 +48,8 @@ public final class AttackHandTracker {
         }
         long now = player.level().getGameTime();
         if (now - tick > VALID_TICKS) {
+            // Lazy expiry: never keep stale entries for players that stopped attacking.
+            clear(player.getUUID());
             return false;
         }
         return hand.contains("OFF_HAND");

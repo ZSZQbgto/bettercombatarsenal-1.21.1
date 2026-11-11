@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "net.bettercombat.client.particle.SlashParticleUtil", remap = false)
 public class SlashParticleUtilMixin {
 
-    @Inject(method = "appearanceFor", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "appearanceFor", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private static void bettercombat_neonarsenal$forgeAppearance(Player player, ItemStack stack,
                                                             CallbackInfoReturnable<Object> callback) {
         if (stack == null || stack.isEmpty()) {

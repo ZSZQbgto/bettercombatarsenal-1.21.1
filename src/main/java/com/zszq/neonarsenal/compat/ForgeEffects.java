@@ -22,7 +22,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -49,7 +48,6 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * (see {@link Forge#hitEffectActive}). Held bonuses are applied once per material.</p>
  *
  * <ul>
- *   <li><b>Fire charge</b>: hits ignite the target for 8 s (no enchantment glint).</li>
  *   <li><b>Chorus fruit</b>: pull hostiles (20 blocks, line of sight) + 4 s stun; 5 s weapon cooldown.</li>
  *   <li><b>Creeper head</b>: spawns a creeper that walks away from the player for 4 s while pulling
  *       living mobs within 6 blocks along its path, then swells/flashes white for 1.4 s and explodes
@@ -69,6 +67,8 @@ public final class ForgeEffects {
     private static final int CREEPER_COOLDOWN_TICKS = 600;
     private static final int CREEPER_WALK_TICKS = 80;
     private static final int CREEPER_FLASH_TICKS = 28;
+    /** Detection/flee radius of the vanilla-style player avoidance goal (creeper vs cat behaviour). */
+    private static final float CREEPER_FLEE_DISTANCE = 24.0F;
     private static final double CREEPER_ATTRACT_RANGE = 6.0D;
     private static final double CREEPER_ATTRACT_STEP = 0.45D;
 
@@ -135,6 +135,11 @@ public final class ForgeEffects {
     // ------------------------------------------------------------------ hit effects
 
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (event.isCanceled()) {
+            // Blocking cancels the damage after this listener runs in registration order; forge
+            // on-hit effects must not fire on a completely blocked hit.
+            return;
+        }
         if (!(event.getSource().getDirectEntity() instanceof Player player) || player.level().isClientSide()) {
             return;
         }
@@ -238,7 +243,15 @@ public final class ForgeEffects {
         creeper.setPersistenceRequired();
         creeper.setInvulnerable(true);
         creeper.setSwellDir(0);
+        creeper.setTarget(null);
         creeper.addTag(TAG_FORGE_CREEPER);
+        // No player targeting while the creeper runs away (otherwise SwellGoal/MeleeAttackGoal would
+        // fight the avoidance goal).
+        creeper.targetSelector.removeAllGoals(goal -> true);
+        // Same goal vanilla creepers use to flee cats: real pathfinding and sprinting away. The
+        // radius is widened to cover the effect's 4 s retreat so the creeper genuinely leaves.
+        creeper.goalSelector.addGoal(3, new net.minecraft.world.entity.ai.goal.AvoidEntityGoal<>(
+                creeper, Player.class, CREEPER_FLEE_DISTANCE, 1.0D, 1.2D));
         level.addFreshEntity(creeper);
         CREEPERS.put(creeper, new CreeperState(now + CREEPER_WALK_TICKS));
     }
@@ -334,16 +347,26 @@ public final class ForgeEffects {
 
     // ------------------------------------------------------------------ held bonuses
 
-    /** Applies the held bonuses of every forge layer on the main-hand weapon. */
+    /** Last layer string whose held bonuses were applied, per player (avoids per-tick churn). */
+    private static final Map<UUID, String> LAST_LAYER_KEY = new HashMap<>();
+
+    /** Applies the held bonuses of every forge layer on the main-hand weapon (only on change). */
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
             return;
         }
+        UUID id = player.getUUID();
         ItemStack weapon = player.getMainHandItem();
+        String key = weapon.getItem() instanceof SharpnessWeaponItem ? Forge.rawLayers(weapon) : "";
+        String last = LAST_LAYER_KEY.get(id);
+        if (last != null && last.equals(key)) {
+            return;
+        }
+        LAST_LAYER_KEY.put(id, key);
         double attackSpeed = 0.0D;
         double damage = 0.0D;
         double moveSpeed = 0.0D;
-        if (weapon.getItem() instanceof SharpnessWeaponItem) {
+        if (!key.isEmpty()) {
             for (String layer : Forge.distinctLayers(weapon)) {
                 switch (layer) {
                     case Forge.CHORUS -> {
@@ -368,6 +391,11 @@ public final class ForgeEffects {
         applyModifier(player.getAttribute(Attributes.ATTACK_SPEED), ATTACK_SPEED_ID, attackSpeed);
         applyModifier(player.getAttribute(Attributes.ATTACK_DAMAGE), DAMAGE_ID, damage);
         applyModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), MOVE_SPEED_ID, moveSpeed);
+    }
+
+    /** Forgets the cached bonus state of a player that left the server. */
+    public static void clear(UUID id) {
+        LAST_LAYER_KEY.remove(id);
     }
 
     private static void applyModifier(AttributeInstance attribute, ResourceLocation id, double amount) {
@@ -408,6 +436,12 @@ public final class ForgeEffects {
             return;
         }
         long now = entity.level().getGameTime();
+        boolean maybeForgeEntity = entity instanceof Rabbit || entity instanceof Creeper;
+        if (!maybeForgeEntity && RABBIT_MINIONS.isEmpty() && CREEPERS.isEmpty()
+                && FRENZY_UNTIL.isEmpty() && STUNNED_UNTIL.isEmpty() && CREEPER_ATTRACTED.isEmpty()) {
+            // Nothing forge-related is active: skip the map lookups for every ordinary mob.
+            return;
+        }
         if (isForgeSummon(entity)) {
             // Summons ignore all external damage and knockback; the knockback-resistance attribute
             // also stops vanilla explosion pushes that bypass a damage event.
@@ -501,7 +535,7 @@ public final class ForgeEffects {
         creeper.setInvulnerable(true);
         creeper.setHealth(creeper.getMaxHealth());
         if (now >= state.explodeAt) {
-            NeonArsenal.LOGGER.info("Creeper forge: swell finished, custom explosion (no terrain damage)");
+            NeonArsenal.LOGGER.debug("Creeper forge: swell finished, custom explosion (no terrain damage)");
             CREEPERS.remove(creeper);
             level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
                     creeper.getX(), creeper.getY() + 0.6D, creeper.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
@@ -537,27 +571,21 @@ public final class ForgeEffects {
             }
         }
         if (now < state.walkEnd) {
-            // Walk straight away from the player.
-            Vec3 away = new Vec3(creeper.getX() - nearestPlayerX(creeper), 0.0D,
-                    creeper.getZ() - nearestPlayerZ(creeper));
-            if (away.lengthSqr() < 1.0E-4D) {
-                away = new Vec3(creeper.getZ(), 0.0D, -creeper.getX());
-            }
-            away = away.normalize();
+            // Flee via the vanilla AvoidEntityGoal (same AI as a creeper avoiding a cat): the goal
+            // owns the navigation and pathfinds around terrain, so no direct position movement here.
             creeper.setSwellDir(0);
             creeper.setTarget(null);
-            creeper.getNavigation().stop();
-            creeper.setYRot((float) (Math.toDegrees(Math.atan2(away.x, away.z))));
-            creeper.setYHeadRot(creeper.getYRot());
-            // Fast, direct retreat: 0.25 blocks per tick (~5 blocks/s), independent of pathfinding.
-            creeper.move(MoverType.SELF, new Vec3(away.x * 0.25D, -0.08D, away.z * 0.25D));
-            creeper.setDeltaMovement(0.0D, creeper.getDeltaMovement().y, 0.0D);
         } else {
             if (!state.flashing) {
                 state.flashing = true;
-                NeonArsenal.LOGGER.info("Creeper forge: walked away for 4 s, now swelling/flashing for 1.4 s");
+                // Stop fleeing and stand still to play the vanilla white-flash swell: keep only the
+                // float/swell goals so no navigation goal walks the creeper away from its spot.
+                creeper.goalSelector.removeAllGoals(goal ->
+                        !(goal instanceof net.minecraft.world.entity.ai.goal.FloatGoal)
+                                && !(goal instanceof net.minecraft.world.entity.ai.goal.SwellGoal));
+                creeper.getNavigation().stop();
+                NeonArsenal.LOGGER.debug("Creeper forge: walked away for 4 s, now swelling/flashing for 1.4 s");
             }
-            // Stop and start the vanilla creeper white-flash swell.
             creeper.getNavigation().stop();
             creeper.setTarget(null);
             creeper.setSwellDir(1);
@@ -589,16 +617,6 @@ public final class ForgeEffects {
             hostile.setTarget(null);
             hostile.getNavigation().stop();
         }
-    }
-
-    private static double nearestPlayerX(Creeper creeper) {
-        Player nearest = creeper.level().getNearestPlayer(creeper, 64.0D);
-        return nearest != null ? nearest.getX() : creeper.getX();
-    }
-
-    private static double nearestPlayerZ(Creeper creeper) {
-        Player nearest = creeper.level().getNearestPlayer(creeper, 64.0D);
-        return nearest != null ? nearest.getZ() : creeper.getZ();
     }
 
     private static void explodeCreeper(ServerLevel level, Creeper creeper) {
@@ -682,6 +700,9 @@ public final class ForgeEffects {
 
     /** Stunned mobs cannot deal damage; summoned rabbits and creepers cannot be damaged at all. */
     public static void onStunDamage(LivingIncomingDamageEvent event) {
+        if (event.isCanceled()) {
+            return;
+        }
         if (isForgeSummon(event.getEntity())) {
             event.setAmount(0.0F);
             return;

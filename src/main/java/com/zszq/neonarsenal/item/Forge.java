@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 /** Forge ("锻刃") layers of an arsenal weapon and their colours. */
 public final class Forge {
 
-    public static final int MAX_LAYERS = 3;
+    public static final int MAX_LAYERS = 6;
     /** Each material can be forged at most twice: the second copy unlocks its on-hit effect. */
     public static final int MAX_LEVEL = 2;
     public static final String CHORUS = "chorus";
@@ -55,6 +55,15 @@ public final class Forge {
     }
 
     /** {@return the forged layers without duplicates, in first-forged order}. */
+    /** {@return the raw comma separated layer string (no list/split allocation); "" when unforged}. */
+    public static String rawLayers(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return "";
+        }
+        String value = stack.get(ModDataComponents.FORGE.get());
+        return value == null ? "" : value;
+    }
+
     public static List<String> distinctLayers(ItemStack stack) {
         return List.copyOf(new java.util.LinkedHashSet<>(layers(stack)));
     }
@@ -88,7 +97,7 @@ public final class Forge {
 
     /**
      * Applies the forge rarity bonus: one rarity tier per two forged layers (layers 0-1 stay
-     * COMMON, layers 2-3 give UNCOMMON, and so on up to EPIC), stored in
+     * COMMON, 2-3 UNCOMMON, 4-5 RARE, 6 EPIC), stored in
      * {@code DataComponents.RARITY} so the item name colour follows it. The grindstone wipe removes
      * the component again.
      */
@@ -261,29 +270,8 @@ public final class Forge {
         };
     }
 
-    public static String nameOf(String layer) {
-        return switch (layer) {
-            case CHORUS -> "紫颂果";
-            case CREEPER -> "苦力怕头颅";
-            case RABBIT -> "兔子脚";
-            case ECHO -> "回响碎片";
-            default -> layer;
-        };
-    }
-
-    public static boolean hasChorus(ItemStack stack) {
-        return has(stack, CHORUS);
-    }
-
-    public static boolean hasCreeper(ItemStack stack) {
-        return has(stack, CREEPER);
-    }
-
+    /** {@return whether the stack has the rabbit-foot layer}. */
     public static boolean hasRabbit(ItemStack stack) {
         return has(stack, RABBIT);
-    }
-
-    public static boolean hasEcho(ItemStack stack) {
-        return has(stack, ECHO);
     }
 }

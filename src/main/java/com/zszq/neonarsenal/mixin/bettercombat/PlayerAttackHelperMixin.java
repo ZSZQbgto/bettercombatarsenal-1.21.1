@@ -21,13 +21,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "net.bettercombat.logic.PlayerAttackHelper", remap = false)
 public class PlayerAttackHelperMixin {
 
-    @Inject(method = "getCurrentAttack", at = @At("RETURN"), remap = false)
+    @Inject(method = "getCurrentAttack", at = @At("RETURN"), remap = false, require = 0)
     private static void bettercombat_neonarsenal$recordAttackHand(Player player, int comboCount,
                                                              CallbackInfoReturnable<Object> callback) {
         AttackHandTracker.record(player, callback.getReturnValue());
     }
 
-    @Inject(method = "getCurrentAttack", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "getCurrentAttack", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private static void bettercombat_neonarsenal$jumpAttack(Player player, int comboCount,
                                                        CallbackInfoReturnable<Object> callback) {
         Object forced = JumpAttackHandler.forPlayer(player, comboCount);

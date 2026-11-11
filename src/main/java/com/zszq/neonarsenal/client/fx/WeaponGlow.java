@@ -1,5 +1,6 @@
 package com.zszq.neonarsenal.client.fx;
 
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -22,6 +23,7 @@ import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
@@ -140,6 +142,11 @@ public final class WeaponGlow {
 
     /** Blade direction (axis index, min, extent) of every overlay model, in model-space units. */
     private static final Map<BakedModel, float[]> BLADE_COORDS = new WeakHashMap<>();
+    /** Baked {@code <id>_fx} overlay model per item (cleared when models are reloaded). */
+    private static final Map<Item, BakedModel> OVERLAY_CACHE = new IdentityHashMap<>();
+    /** Render-thread scratch arrays, so the per-vertex flowing colour allocates nothing. */
+    private static final float[] HSV_SCRATCH = new float[3];
+    private static final float[] RGB_SCRATCH = new float[3];
 
     /** Flow speed in colour cycles per second ("medium" speed). */
     private static final float FLOW_SPEED = 0.45F;
@@ -174,18 +181,22 @@ public final class WeaponGlow {
             return;
         }
 
-        ModelManager modelManager = Minecraft.getInstance().getModelManager();
-        ResourceLocation overlayId = ResourceLocation.fromNamespaceAndPath(
-                itemId.getNamespace(), "item/" + itemId.getPath() + "_fx");
-        BakedModel overlay = modelManager.getModel(ModelResourceLocation.standalone(overlayId));
-        if (overlay == modelManager.getMissingModel()) {
-            return;
+        BakedModel overlay = OVERLAY_CACHE.get(stack.getItem());
+        if (overlay == null) {
+            ModelManager modelManager = Minecraft.getInstance().getModelManager();
+            ResourceLocation overlayId = ResourceLocation.fromNamespaceAndPath(
+                    itemId.getNamespace(), "item/" + itemId.getPath() + "_fx");
+            overlay = modelManager.getModel(ModelResourceLocation.standalone(overlayId));
+            if (overlay == modelManager.getMissingModel()) {
+                return;
+            }
+            OVERLAY_CACHE.put(stack.getItem(), overlay);
         }
 
         // Forged layers and dye tint the blade even before a glow ink sac is forged: draw the
         // blade mask as a plain translucent colour overlay instead of the self-lit glow.
         boolean hasColour = com.zszq.neonarsenal.item.Forge.dyeColor(stack) >= 0
-                || !com.zszq.neonarsenal.item.Forge.layers(stack).isEmpty();
+                || !com.zszq.neonarsenal.item.Forge.rawLayers(stack).isEmpty();
         if (!com.zszq.neonarsenal.item.Forge.glowEnabled(stack) && hasColour) {
             // Reuse the glow overlay model and its polygon-offset positioning, but blend normally
             // and use the world light so the tint does not glow.
@@ -233,13 +244,19 @@ public final class WeaponGlow {
             tint = new float[]{((dye >> 16) & 0xFF) / 255.0F,
                     ((dye >> 8) & 0xFF) / 255.0F,
                     (dye & 0xFF) / 255.0F};
-        } else if (!com.zszq.neonarsenal.item.Forge.layers(stack).isEmpty()) {
+        } else if (!com.zszq.neonarsenal.item.Forge.rawLayers(stack).isEmpty()) {
             int forgeColor = com.zszq.neonarsenal.item.Forge.color(stack);
             tint = new float[]{((forgeColor >> 16) & 0xFF) / 255.0F,
                     ((forgeColor >> 8) & 0xFF) / 255.0F,
                     (forgeColor & 0xFF) / 255.0F};
         }
         return tint;
+    }
+
+    /** Drops the cached overlay models/geometry (called when the model manager reloads). */
+    public static void clearModelCache() {
+        OVERLAY_CACHE.clear();
+        BLADE_COORDS.clear();
     }
 
     /** Additive, full-bright layer used by the deferred first-person pass. */
@@ -261,7 +278,7 @@ public final class WeaponGlow {
     /** Emits the overlay quads with per-vertex flowing colours. */
     private static void drawFlowing(VertexConsumer buffer, PoseStack.Pose pose, BakedModel overlay,
                                     float[] tint, float alpha, boolean emissive, int packedLight) {
-        float[] hsv = rgbToHsv(tint);
+        float[] hsv = rgbToHsv(tint, HSV_SCRATCH);
         float[] coords = bladeCoords(overlay);
         double seconds = System.nanoTime() / 1.0E9D;
         for (Direction direction : Direction.values()) {
@@ -286,9 +303,9 @@ public final class WeaponGlow {
                 float z = Float.intBitsToFloat(data[offset + 2]);
                 float u = Float.intBitsToFloat(data[offset + 4]);
                 float v = Float.intBitsToFloat(data[offset + 5]);
-                float[] rgb = flowColor(hsv, bladeCoord(coords, x, y, z), seconds);
+                flowColor(hsv, bladeCoord(coords, x, y, z), seconds, RGB_SCRATCH);
                 buffer.addVertex(pose, x, y, z)
-                        .setColor(rgb[0], rgb[1], rgb[2], alpha)
+                        .setColor(RGB_SCRATCH[0], RGB_SCRATCH[1], RGB_SCRATCH[2], alpha)
                         .setUv(u, v);
                 if (emissive) {
                     buffer.setOverlay(OverlayTexture.NO_OVERLAY);
@@ -393,16 +410,16 @@ public final class WeaponGlow {
      * the hue ring inside a narrow range (the second harmonic keeps the bands organic), and the
      * brightness follows the same wave so an uncoloured blade still shows the flow.
      */
-    private static float[] flowColor(float[] hsv, float bladeCoord, double seconds) {
+    private static void flowColor(float[] hsv, float bladeCoord, double seconds, float[] out) {
         double phase = (bladeCoord * FLOW_CYCLES + seconds * FLOW_SPEED) * Math.PI * 2.0D;
         float wave = (float) Math.sin(phase);
         float hue = hsv[0] + FLOW_HUE
                 * (wave + FLOW_HUE_SECOND * (float) Math.sin(phase * 2.0D - 1.1D));
         float value = hsv[2] * (1.0F + FLOW_BRIGHTNESS * wave);
-        return hsvToRgb(hue, hsv[1], Math.max(0.0F, Math.min(1.0F, value)));
+        hsvToRgb(hue, hsv[1], Math.max(0.0F, Math.min(1.0F, value)), out);
     }
 
-    private static float[] rgbToHsv(float[] rgb) {
+    private static float[] rgbToHsv(float[] rgb, float[] out) {
         float r = rgb[0];
         float g = rgb[1];
         float b = rgb[2];
@@ -423,10 +440,13 @@ public final class WeaponGlow {
             hue += 360.0F;
         }
         float saturation = max == 0.0F ? 0.0F : delta / max;
-        return new float[]{hue, saturation, max};
+        out[0] = hue;
+        out[1] = saturation;
+        out[2] = max;
+        return out;
     }
 
-    private static float[] hsvToRgb(float hue, float saturation, float value) {
+    private static void hsvToRgb(float hue, float saturation, float value, float[] out) {
         float h = ((hue % 360.0F) + 360.0F) % 360.0F / 60.0F;
         int sector = ((int) Math.floor(h)) % 6;
         float f = h - (float) Math.floor(h);
@@ -468,7 +488,9 @@ public final class WeaponGlow {
                 b = q;
             }
         }
-        return new float[]{r, g, b};
+        out[0] = r;
+        out[1] = g;
+        out[2] = b;
     }
 
     /**

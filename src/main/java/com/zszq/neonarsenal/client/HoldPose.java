@@ -11,6 +11,7 @@ import com.google.gson.JsonParser;
 import com.zszq.neonarsenal.NeonArsenal;
 import com.zszq.neonarsenal.client.fx.FpaBend;
 import com.zszq.neonarsenal.compat.AttackAnimationTracker;
+import com.zszq.neonarsenal.compat.FallSlamState;
 import com.zszq.neonarsenal.weapon.HoldAnimationWeapons;
 
 import net.minecraft.client.Minecraft;
@@ -181,13 +182,19 @@ public final class HoldPose {
                 || player.isSwimming() || player.onClimbable() || player.isFallFlying()) {
             return false;
         }
-        if (player.swinging || AttackAnimationTracker.isAnimating(player)) {
+        boolean local = player == Minecraft.getInstance().player;
+        if (player.swinging || AttackAnimationTracker.isAnimating(player)
+                || (local && (FallSlamAnimation.isControlling() || FallSlamState.blockAttacks))) {
+            // The fall slam keeps its manually played animation frozen far longer than its original
+            // cooldown length, so the animation tracker expires while the windup is still running.
+            // Without this guard the holding pose would blend back in ("hand returns to idle") in
+            // the middle of the falling slash. Only the local player owns the fall-slam state.
             return false;
         }
         // The blocking pose owns the arms while it is active (including its fade-out), and the
         // charge thrust keeps its own manual attack animation on the arm for as long as it lasts.
         return BlockPose.progressOf(player) <= 0.001F
-                && !ChargeThrustClient.isCharging();
+                && !(local && ChargeThrustClient.isCharging());
     }
 
     private static void copyOuter(ModelPart outer, ModelPart inner) {
@@ -209,6 +216,19 @@ public final class HoldPose {
 
     private static float frameSeconds() {
         return Minecraft.getInstance().getFrameTimeNs() / 1_000_000_000.0F;
+    }
+
+    /** Drops the parsed animation bone so a resource reload can re-read it. */
+    public static void reset() {
+        arm = null;
+        loadTried = false;
+    }
+
+    /** Drops all per-player/per-model render state (used on disconnect). */
+    public static void clearAll() {
+        BLEND.clear();
+        SWING.clear();
+        BENDS.clear();
     }
 
     private static void ensureLoaded() {

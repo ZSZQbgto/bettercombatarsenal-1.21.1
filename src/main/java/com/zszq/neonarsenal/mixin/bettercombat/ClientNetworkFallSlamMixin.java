@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "net.bettercombat.client.ClientNetwork", remap = false)
 public class ClientNetworkFallSlamMixin {
 
-    @Inject(method = "handleAttackAnimation", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "handleAttackAnimation", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private static void neonarsenal$blockOwnAnimation(Packets.AttackAnimation packet, CallbackInfo ci) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (FallSlamState.waitingForSlam && player != null && packet.playerId() == player.getId()) {
@@ -33,7 +33,7 @@ public class ClientNetworkFallSlamMixin {
         }
     }
 
-    @Inject(method = "handleAttackSound", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "handleAttackSound", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private static void neonarsenal$blockOwnSound(Packets.AttackSound packet, CallbackInfo ci) {
         if (FallSlamState.waitingForSlam) {
             ci.cancel();

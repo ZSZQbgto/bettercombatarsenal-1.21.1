@@ -41,6 +41,47 @@
 					"rotation": [42.5, 0, 0]
 				}
 			}
+		},
+		"parrywithoutfpa": {
+			"loop": true,
+			"bones": {
+				"torso": {
+					"rotation": [15, 0, 0],
+					"position": [0, -1, -1]
+				},
+				"torso_bend": {
+					"rotation": [5, 0, 0]
+				},
+				"head": {
+					"rotation": [10.0093, 2.462, 0.4344],
+					"position": [0, -1, -1]
+				},
+				"right_arm": {
+					"rotation": [-85.3045, -28.4616, 62.6251],
+					"position": [0, -1, 0]
+				},
+				"right_arm_bend": {
+					"rotation": [-0.0241, 0.4499, 1.3245]
+				},
+				"left_arm": {
+					"rotation": [-85.814, -8.794, -115.733],
+					"position": [0, -1, 0]
+				},
+				"left_arm_bend": {
+					"rotation": [0, 0, 0]
+				},
+				"right_leg": {
+					"rotation": [32.5, 0, 0],
+					"position": [0, -1, 2]
+				},
+				"left_leg": {
+					"rotation": [-30, 0, 0],
+					"position": [0, -1, 2]
+				},
+				"left_leg_bend": {
+					"rotation": [42.5, 0, 0]
+				}
+			}
 		}
 	}
 }

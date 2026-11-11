@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class SlashTrailFallSlamMixin {
 
     @Inject(method = "spawnParticles(Lnet/minecraft/client/player/AbstractClientPlayer;ZFLjava/util/List;Lnet/bettercombat/api/fx/TrailAppearance;)V",
-            at = @At("HEAD"), cancellable = true, remap = false)
+            at = @At("HEAD"), cancellable = true, remap = false, require = 0)
     private static void neonarsenal$filterFallSlamTrail(AbstractClientPlayer player, boolean offHand,
                                                         float weaponRange, List<ParticlePlacement> placements,
                                                         TrailAppearance appearance, CallbackInfo ci) {

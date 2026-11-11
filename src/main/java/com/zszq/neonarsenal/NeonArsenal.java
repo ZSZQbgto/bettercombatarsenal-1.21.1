@@ -98,6 +98,8 @@ public final class NeonArsenal {
                 com.zszq.neonarsenal.compat.ChargeThrustHandler::onPlayerTick);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 com.zszq.neonarsenal.compat.ChargeThrustHandler::onPlayerLoggedOut);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.zszq.neonarsenal.compat.PlayerStateCleanup::onPlayerLoggedOut);
     }
 
     private void registerPayloads(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {

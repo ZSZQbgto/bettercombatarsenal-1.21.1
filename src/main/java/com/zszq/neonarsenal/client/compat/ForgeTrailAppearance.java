@@ -17,6 +17,7 @@ public final class ForgeTrailAppearance {
     private static Constructor<?> appearanceConstructor;
     private static Constructor<?> partConstructor;
     private static boolean logged;
+    private static boolean failureLogged;
 
     private ForgeTrailAppearance() {
     }
@@ -37,11 +38,12 @@ public final class ForgeTrailAppearance {
             Object appearance = appearanceConstructor.newInstance(primaryPart, secondaryPart);
             if (!logged) {
                 logged = true;
-                NeonArsenal.LOGGER.info(
+                NeonArsenal.LOGGER.debug(
                         "Forge colours applied to Better Combat's slash trail (scrolling gradient)");
             }
             return appearance;
-        } catch (Throwable ignored) {
+        } catch (Throwable throwable) {
+            warnFailure(throwable);
             return null;
         }
     }
@@ -56,9 +58,21 @@ public final class ForgeTrailAppearance {
             Class<?> part = Class.forName("net.bettercombat.api.fx.TrailAppearance$Part");
             appearanceConstructor = appearance.getConstructor(part, part);
             partConstructor = part.getConstructor(long.class, boolean.class);
-        } catch (Throwable ignored) {
+        } catch (Throwable throwable) {
             appearanceConstructor = null;
             partConstructor = null;
+            warnFailure(throwable);
         }
+    }
+
+    /** Reports the first failure only, so a missing/changed Better Combat API does not spam logs. */
+    private static void warnFailure(Throwable throwable) {
+        if (failureLogged) {
+            return;
+        }
+        failureLogged = true;
+        NeonArsenal.LOGGER.warn(
+                "Better Combat trail appearance is unavailable; forged slash-trail colours are disabled",
+                throwable);
     }
 }

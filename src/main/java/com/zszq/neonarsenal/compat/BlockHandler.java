@@ -194,6 +194,11 @@ public final class BlockHandler {
     }
 
     /** Tracks block duration and breaks the combo after a long block. */
+    /** Forgets the block start time of a player that left the server. */
+    public static void clear(UUID id) {
+        BLOCK_START.remove(id);
+    }
+
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;

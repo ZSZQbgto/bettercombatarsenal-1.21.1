@@ -32,6 +32,11 @@ public final class SharpnessEvents {
     }
 
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (event.isCanceled()) {
+            // The target blocked the hit (the blocking listener cancels after this one runs); never
+            // consume sharpness or scale damage for a fully blocked hit.
+            return;
+        }
         if (!(event.getSource().getDirectEntity() instanceof Player player) || player.level().isClientSide()) {
             return;
         }
@@ -51,6 +56,11 @@ public final class SharpnessEvents {
                 Sharpness.consume(weapon);
             }
         }
+    }
+
+    /** Forgets the last-hit tick of a player that left the server. */
+    public static void clear(UUID id) {
+        LAST_HIT_TICK.remove(id);
     }
 
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
